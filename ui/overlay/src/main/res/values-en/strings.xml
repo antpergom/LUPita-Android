@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Provisional (step 3b): removed once real capture exists (step 4). -->
+    <string name="overlay_capture_pending">Capture: coming in step 4</string>
+</resources>

@@ -33,6 +33,8 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
     implementation(libs.lifecycle.runtime.ktx)
+    // ViewModelStore/Owner: la ComposeView fuera de una Activity necesita aportar los tres owners.
+    implementation(libs.lifecycle.viewmodel.compose)
 
     testImplementation(libs.junit)
 }

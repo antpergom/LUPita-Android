@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Provisional (paso 3b): se retira cuando exista la captura real (paso 4). -->
+    <string name="overlay_capture_pending">Captura: llega en el paso 4</string>
+</resources>

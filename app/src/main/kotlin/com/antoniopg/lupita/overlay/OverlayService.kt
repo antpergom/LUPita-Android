@@ -11,14 +11,21 @@ import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
+import com.antoniopg.lupita.LupitaApp
 import com.antoniopg.lupita.MainActivity
 import com.antoniopg.lupita.R
+import com.antoniopg.lupita.ui.overlay.BubbleOverlay
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 
 /**
  * Servicio en primer plano que sostiene la burbuja. Su notificacion es la UNICA via de apagarla
  * (accion "Apagar"): no hay gesto de descarte.
  *
- * En F0 (paso 2) todavia no dibuja nada; la burbuja llega en el paso 3.
+ * Dibuja la burbuja (`BubbleOverlay`, en :ui:overlay) mientras el servicio esta vivo.
  *
  * `START_NOT_STICKY` a proposito: con targetSdk >= 35 y SYSTEM_ALERT_WINDOW solo se puede arrancar un
  * servicio en primer plano desde segundo plano si ya hay una ventana de overlay visible, asi que no
@@ -27,7 +34,26 @@ import com.antoniopg.lupita.R
  */
 class OverlayService : Service() {
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var bubble: BubbleOverlay? = null
+
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onDestroy() {
+        bubble?.remove()
+        bubble = null
+        scope.cancel()
+        super.onDestroy()
+    }
+
+    private fun showBubbleIfNeeded() {
+        // `start()` se llama cada vez que se abre la app: no duplicar la ventana.
+        if (bubble != null) return
+        // Sin el permiso, addView lanza BadTokenException; la Activity ya lo exige antes de arrancar.
+        if (!Settings.canDrawOverlays(this)) return
+        val settings = (application as LupitaApp).container.settings
+        bubble = BubbleOverlay(this, settings, scope).also { it.show() }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
@@ -42,6 +68,7 @@ class OverlayService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+        showBubbleIfNeeded()
         return START_NOT_STICKY
     }
 

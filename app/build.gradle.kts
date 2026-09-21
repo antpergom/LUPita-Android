@@ -57,6 +57,8 @@ dependencies {
     implementation(libs.compose.activity)
     implementation(libs.lifecycle.runtime.ktx)
     implementation(libs.datastore.preferences)
+    // Dispatchers.Main del scope del servicio; sin este artefacto falla en ejecucion.
+    implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
