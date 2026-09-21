@@ -86,6 +86,25 @@ class SelectionTest {
     }
 
     @Test
+    fun `a jittery tap below the minimum stroke is not a selection`() {
+        val tap = stroke(500f to 1000f, 503f to 1004f, 499f to 1002f)
+
+        assertNull(Selection.fromStroke(tap, min, w, h, minStrokePx = 60))
+    }
+
+    @Test
+    fun `a stroke long enough on one axis is a selection`() {
+        val line = stroke(300f to 1000f, 400f to 1002f)
+
+        assertEquals(min, Selection.fromStroke(line, min, w, h, minStrokePx = 60)!!.height)
+    }
+
+    @Test
+    fun `without a minimum stroke a tiny stroke still grows as before`() {
+        assertEquals(min, select(stroke(500f to 1000f, 503f to 1004f))!!.width)
+    }
+
+    @Test
     fun `an empty stroke is not a selection`() {
         assertNull(select(StrokeRecorder()))
     }

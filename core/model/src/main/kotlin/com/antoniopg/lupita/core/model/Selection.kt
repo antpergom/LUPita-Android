@@ -68,11 +68,20 @@ object Selection {
      * manteniendo el centro**; y si al crecer se sale de la pantalla, se desplaza hacia dentro sin
      * cambiar el tamano (asi sigue conteniendo el trazo).
      *
-     * `null` si el trazo tiene menos de 2 puntos: un toque suelto no es una seleccion.
+     * `null` si el trazo tiene menos de 2 puntos o su caja no llega a [minStrokePx] en ningun eje: un
+     * toque suelto no es una seleccion, y un dedo real tiembla unos pixeles, asi que un toque no debe
+     * sustituir una seleccion ya hecha por un cuadrado del tamano minimo.
      */
-    fun fromStroke(recorder: StrokeRecorder, minSizePx: Int, screenWidth: Int, screenHeight: Int): SelectionRect? {
+    fun fromStroke(
+        recorder: StrokeRecorder,
+        minSizePx: Int,
+        screenWidth: Int,
+        screenHeight: Int,
+        minStrokePx: Int = 0,
+    ): SelectionRect? {
         if (recorder.count < 2) return null
         val b = recorder.bounds() ?: return null
+        if (max(b.maxX - b.minX, b.maxY - b.minY) < minStrokePx) return null
         val (left, right) = fit(b.minX, b.maxX, minSizePx, screenWidth)
         val (top, bottom) = fit(b.minY, b.maxY, minSizePx, screenHeight)
         return SelectionRect(left, top, right, bottom)

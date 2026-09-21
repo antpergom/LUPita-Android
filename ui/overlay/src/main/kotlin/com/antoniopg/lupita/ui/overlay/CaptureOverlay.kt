@@ -63,6 +63,9 @@ private val Scrim = Color(0xAD0A1416)
 // depende del tema. Con la tinta del tema, en oscuro salia crema sobre crema y el icono no se veia.
 private val FixedInk = Color(0xFF1C1A17)
 
+// Un trazo cuya caja mide menos que esto (en dp) es un toque con temblor, no una seleccion.
+private const val MIN_STROKE_DP = 24
+
 /**
  * Capa de captura (mock): la pantalla se atenua y el usuario dibuja a mano alzada la zona a analizar;
  * del trazo sale un rectangulo (ver [Selection]). Despues confirma o cancela.
@@ -118,7 +121,10 @@ internal fun CaptureOverlay(
                             stroke = recorder.points
                         } while (event.changes.any { it.pressed })
 
-                        val rect = Selection.fromStroke(recorder, minSizePx, screenWidth, screenHeight)
+                        val rect = Selection.fromStroke(
+                            recorder, minSizePx, screenWidth, screenHeight,
+                            minStrokePx = (MIN_STROKE_DP * density).toInt(),
+                        )
                         stroke = emptyList()
                         if (rect != null) {
                             selected = rect
