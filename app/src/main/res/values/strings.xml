@@ -6,4 +6,7 @@
     <string name="notification_title">LUPita activa</string>
     <string name="notification_text">Toca la burbuja para analizar</string>
     <string name="notification_action_stop">Apagar</string>
+
+    <!-- Provisional (F0): el analisis llega en F1 en adelante. -->
+    <string name="capture_done">Zona seleccionada: %1$d × %2$d px</string>
 </resources>

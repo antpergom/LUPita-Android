@@ -18,6 +18,8 @@
     <string name="menu_settings">Ajustes</string>
     <string name="menu_history">Historial</string>
 
-    <!-- Provisional (paso 3): se retira cuando exista la captura real (paso 4). -->
-    <string name="overlay_capture_pending">Captura: llega en el paso 4</string>
+    <string name="capture_hint_draw">Dibuja la zona a analizar</string>
+    <string name="capture_hint_selected">Zona seleccionada — confirma o cancela</string>
+    <string name="capture_cancel">Cancelar</string>
+    <string name="capture_confirm">Analizar</string>
 </resources>

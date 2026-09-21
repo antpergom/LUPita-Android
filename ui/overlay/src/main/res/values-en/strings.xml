@@ -18,6 +18,8 @@
     <string name="menu_settings">Settings</string>
     <string name="menu_history">History</string>
 
-    <!-- Provisional (step 3): removed once real capture exists (step 4). -->
-    <string name="overlay_capture_pending">Capture: coming in step 4</string>
+    <string name="capture_hint_draw">Draw the area to analyze</string>
+    <string name="capture_hint_selected">Area selected — confirm or cancel</string>
+    <string name="capture_cancel">Cancel</string>
+    <string name="capture_confirm">Analyze</string>
 </resources>

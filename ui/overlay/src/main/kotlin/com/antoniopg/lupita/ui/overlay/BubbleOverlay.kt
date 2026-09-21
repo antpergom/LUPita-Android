@@ -10,7 +10,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
-import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -21,6 +20,7 @@ import com.antoniopg.lupita.core.model.BubbleSettings
 import com.antoniopg.lupita.core.model.Depth
 import com.antoniopg.lupita.core.model.OverlayPhase
 import com.antoniopg.lupita.core.model.OverlayTransitions
+import com.antoniopg.lupita.core.model.SelectionRect
 import com.antoniopg.lupita.core.model.SettingsRepository
 import com.antoniopg.lupita.core.model.ToolId
 import kotlin.math.roundToInt
@@ -29,22 +29,29 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+/** Tamano minimo de la zona seleccionada (mock: 60). */
+private const val MIN_SELECTION_DP = 60
+
 /**
- * La burbuja flotante y su menu: ventanas `TYPE_APPLICATION_OVERLAY` con contenido Compose.
+ * La burbuja flotante, su menu y la capa de captura: ventanas `TYPE_APPLICATION_OVERLAY` con
+ * contenido Compose.
  *
  * Es el "host" por superposicion (opcion A, ver docs/decisions/...overlay-superposicion...). El
  * contenido es Compose puro y las reglas y el gesto viven en clases sin Android, de modo que un host
  * alternativo (p. ej. por accesibilidad) solo tendria que reimplementar la creacion de las ventanas.
  *
- * Son DOS ventanas: la de la burbuja (pequena, sin foco: en reposo no roba el teclado ni el foco a la
- * app de debajo) y, mientras el menu esta abierto, otra a pantalla completa para que tocar fuera lo
- * cierre.
+ * La burbuja es una ventana pequena y sin foco (en reposo no roba el teclado ni el foco a la app de
+ * debajo). El menu y la captura abren otra a pantalla completa, que captura los toques.
+ *
+ * [onCapture] recibe el rectangulo confirmado, en pixeles de pantalla. La capa de captura ya se ha
+ * retirado cuando se llama, para que la captura real (F1) no la incluya.
  */
 class BubbleOverlay(
     private val context: Context,
     private val settings: SettingsRepository,
     private val scope: CoroutineScope,
     private val onOpenApp: (AppSection) -> Unit,
+    private val onCapture: (SelectionRect) -> Unit,
 ) {
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val owner = OverlayLifecycleOwner()
@@ -55,9 +62,11 @@ class BubbleOverlay(
     private val marginPx = (BUBBLE_MARGIN_DP * density).roundToInt()
     private val bubblePx = (BUBBLE_SIZE_DP * density).roundToInt()
     private val windowPx = bubblePx + 2 * marginPx
+    private val minSelectionPx = (MIN_SELECTION_DP * density).roundToInt()
 
     private var bubbleWindow: ComposeOverlayWindow? = null
     private var menuWindow: ComposeOverlayWindow? = null
+    private var captureWindow: ComposeOverlayWindow? = null
     private var collectJob: Job? = null
     private var started = false
     private var startX = 0
@@ -83,6 +92,8 @@ class BubbleOverlay(
         collectJob?.cancel()
         collectJob = null
         handler.removeCallbacks(longPressTimer)
+        captureWindow?.remove()
+        captureWindow = null
         menuWindow?.remove()
         menuWindow = null
         bubbleWindow?.remove()
@@ -126,6 +137,18 @@ class BubbleOverlay(
         bubbleWindow = window
     }
 
+    /** Ventana a pantalla completa que SI captura los toques (menu y captura). */
+    private fun fullScreenParams() = WindowManager.LayoutParams(
+        WindowManager.LayoutParams.MATCH_PARENT,
+        WindowManager.LayoutParams.MATCH_PARENT,
+        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        // Sin NOT_TOUCH_MODAL: los toques de fuera del contenido tambien llegan aqui.
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+        PixelFormat.TRANSLUCENT,
+    ).apply { gravity = Gravity.TOP or Gravity.START }
+
     private fun onTouch(v: View, event: MotionEvent): Boolean {
         val p = bubbleWindow?.params ?: return false
         when (event.actionMasked) {
@@ -158,17 +181,8 @@ class BubbleOverlay(
                 moveTo(startX + event.dx.toInt(), startY + event.dy.toInt())
             }
             GestureEvent.DragEnd -> snapToEdgeAndRemember()
-            GestureEvent.Tap -> onTap()
+            GestureEvent.Tap -> setPhase(OverlayTransitions.onTap(phase, current))
             GestureEvent.LongPress -> setPhase(OverlayTransitions.onLongPress(phase))
-        }
-    }
-
-    private fun onTap() {
-        setPhase(OverlayTransitions.onTap(phase, current))
-        if (phase == OverlayPhase.CAPTURING) {
-            // ANDAMIO (paso 3): la captura real llega en el paso 4.
-            Toast.makeText(context, R.string.overlay_capture_pending, Toast.LENGTH_SHORT).show()
-            setPhase(OverlayTransitions.onCaptureFinished(phase))
         }
     }
 
@@ -177,7 +191,10 @@ class BubbleOverlay(
         if (next == previous) return
         phase = next
         Log.d(TAG, "phase $previous -> $next (canCapture=${current.canCapture})")
-        if (next == OverlayPhase.MENU) showMenu() else if (previous == OverlayPhase.MENU) hideMenu()
+        if (previous == OverlayPhase.MENU) hideMenu()
+        if (previous == OverlayPhase.CAPTURING) hideCapture()
+        if (next == OverlayPhase.MENU) showMenu()
+        if (next == OverlayPhase.CAPTURING) showCapture()
     }
 
     private fun showMenu() {
@@ -189,21 +206,11 @@ class BubbleOverlay(
             right = p.x + marginPx + bubblePx,
             bottom = p.y + marginPx + bubblePx,
         )
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            // Sin NOT_TOUCH_MODAL: esta ventana SI captura los toques de fuera del panel (cierran el menu).
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT,
-        ).apply { gravity = Gravity.TOP or Gravity.START }
         menuWindow = ComposeOverlayWindow(
             context = context,
             windowManager = windowManager,
             owner = owner,
-            params = params,
+            params = fullScreenParams(),
             content = {
                 MenuOverlay(
                     settings = current,
@@ -222,6 +229,42 @@ class BubbleOverlay(
     private fun hideMenu() {
         menuWindow?.remove()
         menuWindow = null
+    }
+
+    private fun showCapture() {
+        val bounds = windowManager.currentWindowMetrics.bounds
+        captureWindow = ComposeOverlayWindow(
+            context = context,
+            windowManager = windowManager,
+            owner = owner,
+            params = fullScreenParams(),
+            content = {
+                CaptureOverlay(
+                    screenWidth = bounds.width(),
+                    screenHeight = bounds.height(),
+                    minSizePx = minSelectionPx,
+                    onCancel = ::cancelCapture,
+                    onConfirm = ::confirmCapture,
+                )
+            },
+        ).also { it.add() }
+    }
+
+    private fun hideCapture() {
+        captureWindow?.remove()
+        captureWindow = null
+    }
+
+    private fun cancelCapture() {
+        Log.d(TAG, "capture cancelled")
+        setPhase(OverlayTransitions.onCaptureFinished(phase))
+    }
+
+    private fun confirmCapture(rect: SelectionRect) {
+        Log.d(TAG, "capture confirmed [${rect.left},${rect.top}][${rect.right},${rect.bottom}] ${rect.width}x${rect.height}")
+        // Primero se retira la capa (setPhase), despues se avisa: la captura real no debe incluirla.
+        setPhase(OverlayTransitions.onCaptureFinished(phase))
+        onCapture(rect)
     }
 
     private fun toggleTool(tool: ToolId, enabled: Boolean) {

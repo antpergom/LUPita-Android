@@ -12,10 +12,12 @@ import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
+import android.widget.Toast
 import com.antoniopg.lupita.LupitaApp
 import com.antoniopg.lupita.MainActivity
 import com.antoniopg.lupita.R
 import com.antoniopg.lupita.core.model.AppSection
+import com.antoniopg.lupita.core.model.SelectionRect
 import com.antoniopg.lupita.ui.overlay.BubbleOverlay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,7 +55,13 @@ class OverlayService : Service() {
         // Sin el permiso, addView lanza BadTokenException; la Activity ya lo exige antes de arrancar.
         if (!Settings.canDrawOverlays(this)) return
         val settings = (application as LupitaApp).container.settings
-        bubble = BubbleOverlay(this, settings, scope, onOpenApp = ::openApp).also { it.show() }
+        bubble = BubbleOverlay(this, settings, scope, onOpenApp = ::openApp, onCapture = ::onCapture)
+            .also { it.show() }
+    }
+
+    /** F0 se detiene aqui: F1 tomara la captura real y la recortara con este rectangulo. */
+    private fun onCapture(rect: SelectionRect) {
+        Toast.makeText(this, getString(R.string.capture_done, rect.width, rect.height), Toast.LENGTH_SHORT).show()
     }
 
     /**
