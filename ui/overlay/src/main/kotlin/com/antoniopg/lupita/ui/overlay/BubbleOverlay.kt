@@ -147,7 +147,14 @@ class BubbleOverlay(
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
         PixelFormat.TRANSLUCENT,
-    ).apply { gravity = Gravity.TOP or Gravity.START }
+    ).apply {
+        gravity = Gravity.TOP or Gravity.START
+        // Sin esto una ventana MATCH_PARENT respeta el hueco de las barras del sistema y su origen queda
+        // 145 px por debajo del de la pantalla (visto en el dispositivo: un trazo en (300,800) llegaba
+        // como (300,655)). La captura real (F1) necesita coordenadas de PANTALLA exactas.
+        fitInsetsTypes = 0
+        layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+    }
 
     private fun onTouch(v: View, event: MotionEvent): Boolean {
         val p = bubbleWindow?.params ?: return false

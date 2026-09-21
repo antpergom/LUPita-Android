@@ -60,6 +60,10 @@ import kotlin.math.min
 // rgba(10, 20, 22, .68) del mock.
 private val Scrim = Color(0xAD0A1416)
 
+// Tinta FIJA del boton de cancelar (#1C1A17 en el mock): la capa va siempre sobre un velo oscuro y no
+// depende del tema. Con la tinta del tema, en oscuro salia crema sobre crema y el icono no se veia.
+private val FixedInk = Color(0xFF1C1A17)
+
 // El overlay ocupa toda la pantalla, barra de estado incluida: reserva de espacio para no dibujar el
 // texto y el boton de cerrar debajo de ella (en un Pixel mide ~41 dp).
 private val TOP_INSET = 56.dp
@@ -184,7 +188,7 @@ internal fun CaptureOverlay(
                     modifier = Modifier.offset { IntOffset(x, y) },
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    ActionButton(Icons.Rounded.Close, cancelText, c.onAccent, c.ink, onCancel)
+                    ActionButton(Icons.Rounded.Close, cancelText, c.onAccent, FixedInk, onCancel)
                     ActionButton(
                         Icons.Rounded.Check,
                         stringResource(R.string.capture_confirm),
