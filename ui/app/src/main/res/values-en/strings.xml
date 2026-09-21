@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_title">Permissions needed</string>
+    <string name="onboarding_intro">LUPita needs these permissions to work. They are only used on this device.</string>
+
+    <string name="permission_overlay_title">Display over other apps</string>
+    <string name="permission_overlay_description">Lets the floating bubble be drawn on top of any app.</string>
+    <string name="permission_notifications_title">Notifications</string>
+    <string name="permission_notifications_description">It is the only way to turn the bubble off: without it there would be no way to close it.</string>
+    <string name="permission_grant">Grant</string>
+
+    <string name="service_active_title">LUPita is active</string>
+    <string name="service_active_body">The bubble floats over your other apps. To turn it off, use the button in its notification.</string>
+</resources>

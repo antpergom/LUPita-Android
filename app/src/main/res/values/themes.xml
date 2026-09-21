@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema de plataforma claro/oscuro segun el sistema. La UI real (colores, tipografia) llega con el
+         mock en el paso 5; esto solo evita la barra de accion por defecto. -->
+    <style name="Theme.Lupita" parent="@android:style/Theme.DeviceDefault.DayNight">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>

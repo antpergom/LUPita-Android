@@ -1,13 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- allowBackup=false a proposito: la configuracion y (mas adelante) las credenciales cifradas
-         dependen de una clave del Android Keystore que NO viaja en una copia de seguridad. Restaurar
-         datos sin su clave los dejaria ilegibles, y un backup por adb podria sacar datos del
-         dispositivo. -->
+    <!-- Dibujar la burbuja sobre otras apps. No se concede con un dialogo normal: la app lleva al
+         usuario a los ajustes del sistema (ver MainActivity). -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Obligatorio, no opcional: la notificacion del servicio es la UNICA via de apagar la burbuja. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- allowBackup=false a proposito: la configuracion y, mas adelante, las credenciales dependen de
+         una clave del Android Keystore que NO viaja en una copia de seguridad. Restaurar datos sin su
+         clave los dejaria ilegibles, y un backup por adb podria sacar datos del dispositivo. -->
     <application
         android:allowBackup="false"
         android:label="@string/app_name"
-        android:supportsRtl="true" />
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Lupita">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Desde Android 14 todo servicio en primer plano declara su tipo. Una burbuja flotante no
+             encaja en ninguna categoria concreta: specialUse, con su subtipo explicado. -->
+        <service
+            android:name=".overlay.OverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Floating overlay bubble that lets the user select and analyse a region of the screen" />
+        </service>
+
+    </application>
 
 </manifest>

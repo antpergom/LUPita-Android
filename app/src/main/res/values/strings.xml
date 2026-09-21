@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">LUPita</string>
+
+    <string name="notification_channel_name">Burbuja activa</string>
+    <string name="notification_title">LUPita está activa</string>
+    <string name="notification_text">La burbuja flota sobre las demás apps.</string>
+    <string name="notification_action_stop">Apagar</string>
 </resources>

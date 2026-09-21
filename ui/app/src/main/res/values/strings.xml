@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_title">Permisos necesarios</string>
+    <string name="onboarding_intro">LUPita necesita estos permisos para funcionar. Solo se usan en este dispositivo.</string>
+
+    <string name="permission_overlay_title">Mostrar sobre otras apps</string>
+    <string name="permission_overlay_description">Permite dibujar la burbuja flotante encima de cualquier aplicación.</string>
+    <string name="permission_notifications_title">Notificaciones</string>
+    <string name="permission_notifications_description">Es la única forma de apagar la burbuja: sin ella no habría manera de cerrarla.</string>
+    <string name="permission_grant">Conceder</string>
+
+    <string name="service_active_title">LUPita está activa</string>
+    <string name="service_active_body">La burbuja flota sobre las demás apps. Para apagarla, usa el botón de su notificación.</string>
+</resources>
