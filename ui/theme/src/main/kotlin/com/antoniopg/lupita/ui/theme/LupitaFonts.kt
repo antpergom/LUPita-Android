@@ -25,12 +25,14 @@ object LupitaFonts {
         Font(
             R.font.bricolage_grotesque,
             FontWeight.SemiBold,
-            variationSettings = FontVariation.Settings(FontWeight.SemiBold, androidx.compose.ui.text.font.FontStyle.Normal, FontVariation.weight(600)),
+            // `Settings(weight, style)` ya anade el eje `wght`: repetirlo con `weight(600)` lanzaba
+            // «'wght' must be unique» y la app se cerraba al abrir.
+            variationSettings = FontVariation.Settings(FontWeight.SemiBold, androidx.compose.ui.text.font.FontStyle.Normal),
         ),
         Font(
             R.font.bricolage_grotesque,
             FontWeight.Bold,
-            variationSettings = FontVariation.Settings(FontWeight.Bold, androidx.compose.ui.text.font.FontStyle.Normal, FontVariation.weight(700)),
+            variationSettings = FontVariation.Settings(FontWeight.Bold, androidx.compose.ui.text.font.FontStyle.Normal),
         ),
     )
 }
