@@ -1,0 +1,32 @@
+#!/bin/sh
+# Última barrera antes de publicar. Reglas:
+#  1. Solo se puede subir la rama local `main` a `main` en el remoto (la rama pública). Nada de `dev`,
+#     etiquetas, borrados, `--all` ni `--mirror`.
+#  2. Ningún commit a subir puede estar en el historial de `dev` (que conserva la documentación).
+#  3. Ningún commit a subir ni el árbol final pueden contener rutas protegidas.
+#  4. Ni las líneas añadidas ni los mensajes de los commits a subir pueden parecer secretos.
+# Salida mínima: dice qué regla falló, no el contenido.
+. "$(dirname "$0")/../lib.sh"
+
+ZERO=0000000000000000000000000000000000000000
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ "$local_ref" = "refs/heads/main" ] && [ "$remote_ref" = "refs/heads/main" ] \
+        || wf_die "solo se permite subir main -> main (intento: $local_ref -> $remote_ref)"
+    [ "$local_sha" != "$ZERO" ] || wf_die "no se permite borrar ramas remotas"
+
+    if [ "$remote_sha" = "$ZERO" ]; then range="$local_sha"; else range="$remote_sha..$local_sha"; fi
+
+    if git rev-parse --verify -q refs/heads/dev >/dev/null; then
+        for c in $(git rev-list $range); do
+            if git merge-base --is-ancestor "$c" refs/heads/dev 2>/dev/null; then
+                wf_die "el commit $(git rev-parse --short "$c") pertenece al historial de dev (con documentación): no se sube"
+            fi
+        done
+    fi
+
+    git ls-tree -r --name-only "$local_sha" | wf_check_paths || exit 1
+    git log --root --format= --name-only --diff-filter=ACMR $range | wf_check_paths || exit 1
+    git log --root -p -U0 --no-color --format= $range | wf_added_lines | wf_check_secrets || exit 1
+    git log --root --format=%B $range | wf_check_secrets || exit 1
+done
+exit 0

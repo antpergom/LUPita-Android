@@ -1,0 +1,7 @@
+# Los scripts de git-workflow se ejecutan con sh (Git Bash): siempre con finales de línea LF, aunque
+# core.autocrlf=true los convertiría a CRLF y los rompería.
+scripts/git-workflow/** text eol=lf
+# Gradle wrapper: el script POSIX debe quedarse en LF; el .bat de Windows, en CRLF.
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+*.jar binary

@@ -1,0 +1,18 @@
+#!/bin/sh
+# Bloquea commits que añadan documentación local, ficheros de credenciales o algo con pinta de secreto.
+# Salida mínima: solo dice QUÉ ruta/patrón falló, nunca el contenido.
+. "$(dirname "$0")/../lib.sh"
+
+# Aviso (no bloqueo) si el origen versionado cambió y no se ha reinstalado: los hooks que corren son
+# la copia de `.git/wf`, no la del árbol.
+if [ -r scripts/git-workflow/lib.sh ] && [ -r "$WF_DIR/INSTALLED_FROM" ]; then
+    now="$(cat scripts/git-workflow/lib.sh scripts/git-workflow/hooks/* \
+        scripts/git-workflow/secret-patterns.txt scripts/git-workflow/secret-allowlist.txt 2>/dev/null |
+        sha1sum | cut -d' ' -f1)"
+    [ "$now" = "$(cat "$WF_DIR/INSTALLED_FROM")" ] ||
+        printf 'git-workflow: aviso — scripts/git-workflow ha cambiado; reinstala con: sh scripts/git-workflow/install.sh\n' >&2
+fi
+
+git diff --cached --name-only --diff-filter=ACMR | wf_check_paths || exit 1
+git diff --cached -U0 --no-color | wf_added_lines | wf_check_secrets || exit 1
+exit 0

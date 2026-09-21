@@ -1,0 +1,4 @@
+#!/bin/sh
+# Instantánea local de la documentación no versionada (ver snapshot-docs.sh). Nunca falla el commit.
+sh "$(dirname "$0")/../snapshot-docs.sh" >/dev/null 2>&1
+exit 0

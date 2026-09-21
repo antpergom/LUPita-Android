@@ -1,0 +1,47 @@
+# Credenciales y secretos — nunca en git.
+# LUPita no compila NINGÚN secreto en el APK: las claves de los proveedores de LLM se introducen a
+# mano en Configuración y se guardan cifradas con Tink en el dispositivo (ver NOTAS.md). Estas
+# entradas son la segunda barrera, por si alguna vez aparece un fichero de claves en el árbol.
+secrets.properties
+*.jks
+*.keystore
+local.properties
+google-services.json
+*service-account*.json
+.env
+.env.*
+*.pem
+*.p12
+# Anclada a la raíz a propósito: sin anclar también coincidiría con un paquete Kotlin llamado
+# `credentials/` (bug real del proyecto hermano, 2026-09-08) y dejaría fuera de git su implementación.
+/credentials/
+
+# Gradle / Android Studio
+.gradle/
+.kotlin/
+build/
+.idea/
+*.iml
+.cxx/
+captures/
+.externalNativeBuild/
+*.log
+
+# Fixtures de captura grabados en el dispositivo: contienen el árbol de accesibilidad y capturas de
+# pantalla de apps reales del usuario (mensajería, banca...). NUNCA se versionan ni se publican.
+# Ver NOTAS.md, "Fixtures". Los que se curen como casos de prueba se anonimizan a mano y se mueven a
+# app/src/test/resources/ de forma explícita.
+/fixtures/
+
+# Configuración local de Claude Code (rutas absolutas de esta máquina) y lock de sesión efímero.
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Documentación y diseño: viven solo en local, no se versionan (misma política que el proyecto
+# hermano). El mock exportado de Claude Design va aquí porque su fuente de verdad es el propio
+# proyecto de Claude Design, no este repo.
+/docs/
+/mock/
+/CLAUDE.md
+/TECHNICAL.md
+/NOTAS.md

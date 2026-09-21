@@ -1,0 +1,20 @@
+#!/bin/sh
+# 1) Guarda una instantánea de la documentación no versionada (ver snapshot-docs.sh).
+# 2) AVISA A GRITOS si el commit recién sacado SÍ versionaba la documentación: en ese caso git acaba de
+#    sobrescribir los ficheros locales con la versión antigua, y al volver a `dev` los borrará.
+#    Comprobado (2026-09-20) que `checkout.overwriteIgnore=false` NO lo evita — git considera
+#    desechable un fichero ignorado —, así que la única defensa es detectarlo y decir cómo recuperar.
+# Nunca falla el checkout. Se ejecuta desde .git/wf/hooks, así que existe incluso en commits antiguos.
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+if [ "$3" = "1" ] && git ls-tree -r --name-only HEAD 2>/dev/null |
+    grep -qE '^(docs/|mock/|CLAUDE\.md$|TECHNICAL\.md$|NOTAS\.md$)'; then
+    printf '\n!! git-workflow: este commit versionaba la documentación — tus ficheros locales de\n' >&2
+    printf '!! docs/, mock/, CLAUDE.md, TECHNICAL.md y NOTAS.md ACABAN DE SER SOBRESCRITOS, y al volver a dev se borrarán.\n' >&2
+    printf '!! Recupéralos así (desde la raíz del repo, ya de vuelta en dev):\n' >&2
+    printf '!!     git checkout dev && sh "%s/restore-docs.sh" --last\n\n' "$DIR" >&2
+    exit 0   # no se guarda instantánea: sería la versión ya machacada
+fi
+
+sh "$DIR/snapshot-docs.sh" >/dev/null 2>&1
+exit 0
