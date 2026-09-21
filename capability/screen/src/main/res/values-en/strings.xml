@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_label">LUPita: read the chosen area</string>
+    <string name="accessibility_service_description">Only reads the screen area you choose when you confirm a capture. Apps you mark as protected are never read, and password fields are ignored.</string>
+</resources>

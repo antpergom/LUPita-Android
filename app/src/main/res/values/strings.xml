@@ -9,4 +9,7 @@
 
     <!-- Provisional (F0): el analisis llega en F1 en adelante. -->
     <string name="capture_done">Zona seleccionada: %1$d × %2$d px</string>
+    <string name="capture_read">Leído (%1$s): %2$d nodos · imagen %3$d×%4$d · %5$d KB · %6$d ms</string>
+    <string name="capture_failed">No se pudo capturar: %1$s (%2$s)</string>
+    <string name="capture_protected">App protegida (%1$s): no se ha leído nada</string>
 </resources>

@@ -7,22 +7,33 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.provider.Settings
 import android.widget.Toast
 import com.antoniopg.lupita.LupitaApp
 import com.antoniopg.lupita.MainActivity
 import com.antoniopg.lupita.R
+import com.antoniopg.lupita.capability.privacy.CapturePipeline
+import com.antoniopg.lupita.capability.screen.AccessibilityScreenSource
+import com.antoniopg.lupita.capability.screen.RegionImage
 import com.antoniopg.lupita.core.model.AppSection
+import com.antoniopg.lupita.core.model.ContextBundle
 import com.antoniopg.lupita.core.model.SelectionRect
 import com.antoniopg.lupita.ui.overlay.BubbleOverlay
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Servicio en primer plano que sostiene la burbuja. Su notificacion es la UNICA via de apagarla
@@ -59,10 +70,78 @@ class OverlayService : Service() {
             .also { it.show() }
     }
 
-    /** F0 se detiene aqui: F1 tomara la captura real y la recortara con este rectangulo. */
+    /**
+     * F1.3: captura la region con la puerta de privacidad de por medio y ensena un resumen SIN contenido.
+     * El analisis llega en F5; de momento solo se comprueba que la captura funciona.
+     */
     private fun onCapture(rect: SelectionRect) {
-        Toast.makeText(this, getString(R.string.capture_done, rect.width, rect.height), Toast.LENGTH_SHORT).show()
+        scope.launch {
+            // La capa de captura se acaba de quitar: esperar unos fotogramas para que no salga en la imagen.
+            delay(CAPTURE_SETTLE_MS)
+            val container = (application as LupitaApp).container
+            val settings = container.privacySettings.settings.first()
+            val started = SystemClock.elapsedRealtime()
+            val outcome = withContext(Dispatchers.Default) {
+                CapturePipeline(AccessibilityScreenSource(this@OverlayService), container.privacyGate)
+                    .run(rect, settings)
+            }
+            val ms = SystemClock.elapsedRealtime() - started
+            toast(summarize(outcome, ms))
+        }
     }
+
+    private suspend fun summarize(outcome: CapturePipeline.Outcome, ms: Long): String = when (outcome) {
+        is CapturePipeline.Outcome.Failed ->
+            getString(R.string.capture_failed, outcome.reason.name, outcome.detail ?: "-")
+
+        is CapturePipeline.Outcome.Ready -> {
+            val bundle = outcome.bundle
+            val content = bundle.content
+            if (content == null) {
+                getString(R.string.capture_protected, bundle.header.decisionSource.name)
+            } else {
+                val image = content.pixels
+                val webp = image?.let { withContext(Dispatchers.Default) { RegionImage.encodeWebpLossless(it) } }
+                if (webp != null && image != null) debugSave(bundle, webp, image.width, image.height)
+                getString(
+                    R.string.capture_read,
+                    bundle.header.tier.name,
+                    content.nodes.sumOf { n -> n.flatten().count() },
+                    image?.width ?: 0,
+                    image?.height ?: 0,
+                    (webp?.size ?: 0) / 1024,
+                    ms,
+                )
+            }
+        }
+    }
+
+    /**
+     * SOLO en builds de depuracion (y nunca con una app protegida: no habria contenido): deja la imagen y un
+     * volcado del arbol en el almacenamiento privado, para medir tamanos y comprobar el filtrado por `adb`.
+     * Es el germen del grabador de fixtures (F1.5); no se sube ni se versiona.
+     */
+    private fun debugSave(bundle: ContextBundle, webp: ByteArray, w: Int, h: Int) {
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) return
+        runCatching {
+            val dir = File(filesDir, "debug-captures").apply { mkdirs() }
+            val stamp = System.currentTimeMillis()
+            File(dir, "$stamp.webp").writeBytes(webp)
+            File(dir, "$stamp.txt").writeText(
+                buildString {
+                    appendLine("app=${bundle.header.packageName} tier=${bundle.header.tier} image=${w}x$h webp=${webp.size}")
+                    appendLine("header=${bundle.header}")
+                    bundle.content?.nodes?.forEach { root ->
+                        root.flatten().forEach { n ->
+                            appendLine("${n.className} ${n.bounds} pw=${n.isPassword} ed=${n.isEditable} text=${n.text} desc=${n.contentDescription}")
+                        }
+                    }
+                },
+            )
+        }
+    }
+
+    private fun toast(text: String) = Toast.makeText(this, text, Toast.LENGTH_LONG).show()
 
     /**
      * Abre la app en la seccion pedida desde el menu. Permitido aunque el servicio este en segundo
@@ -127,6 +206,8 @@ class OverlayService : Service() {
     }
 
     companion object {
+        /** Tiempo para que desaparezca la capa de captura antes de pedir la imagen (a medir en el movil). */
+        private const val CAPTURE_SETTLE_MS = 150L
         const val ACTION_STOP = "com.antoniopg.lupita.action.STOP_OVERLAY"
         private const val CHANNEL_ID = "overlay_service"
         private const val NOTIFICATION_ID = 1

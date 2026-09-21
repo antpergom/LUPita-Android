@@ -9,6 +9,9 @@ class FakeScreenSource(
     private val onCapture: (CaptureRequest) -> CaptureResult = { CaptureResult.Failed(CaptureFailure.ERROR, "sin configurar") },
 ) : ScreenSource {
 
+    var available = true
+    override val isAvailable: Boolean get() = available
+
     var foregroundCalls = 0
         private set
     var captureCalls = 0

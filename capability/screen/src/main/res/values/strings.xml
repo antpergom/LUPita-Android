@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_label">LUPita: leer la zona elegida</string>
+    <string name="accessibility_service_description">Solo lee la zona de pantalla que tú eliges cuando confirmas una captura. Las apps que marques como protegidas no se leen nunca, y los campos de contraseña se ignoran.</string>
+</resources>

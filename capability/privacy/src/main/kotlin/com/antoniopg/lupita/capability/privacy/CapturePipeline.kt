@@ -36,6 +36,7 @@ class CapturePipeline(private val source: ScreenSource, private val gate: Privac
     }
 
     suspend fun run(region: SelectionRect, settings: PrivacySettings): Outcome {
+        if (!source.isAvailable) return Outcome.Failed(CaptureFailure.SERVICE_UNAVAILABLE)
         val app = source.foreground() ?: return Outcome.Failed(CaptureFailure.NO_FOREGROUND_APP)
         val decision = gate.decide(app.packageName, app.signals, settings)
         if (decision.tier == PrivacyTier.PROTECTED) return Outcome.Ready(headerOnly(app, decision))

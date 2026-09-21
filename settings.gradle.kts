@@ -26,6 +26,7 @@ rootProject.name = "lupita"
 include(":app")
 include(":core:model")
 include(":capability:privacy")
+include(":capability:screen")
 include(":ui:overlay")
 include(":ui:app")
 include(":ui:theme")

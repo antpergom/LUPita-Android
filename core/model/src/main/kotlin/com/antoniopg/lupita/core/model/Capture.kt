@@ -80,6 +80,9 @@ sealed interface CaptureResult {
  * accesibilidad) debe implementar esta misma interfaz. Ver `docs/decisions/2026-09-21-overlay-superposicion-y-fuentes-de-pantalla.md`.
  */
 interface ScreenSource {
+    /** `false` si la fuente no puede funcionar ahora (p. ej. el servicio de accesibilidad esta apagado). */
+    val isAvailable: Boolean get() = true
+
     /** La app de primer plano y las senales de su ventana. Es lo unico que se lee antes de decidir la privacidad. */
     suspend fun foreground(): ForegroundApp?
 

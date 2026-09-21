@@ -107,6 +107,17 @@ class CapturePipelineTest {
     }
 
     @Test
+    fun `an unavailable source fails before reading anything`() {
+        val src = source("com.social.app", result = captured("com.social.app", node("x"))).also { it.available = false }
+
+        val out = run(src) as CapturePipeline.Outcome.Failed
+
+        assertEquals(CaptureFailure.SERVICE_UNAVAILABLE, out.reason)
+        assertEquals(0, src.foregroundCalls)
+        assertEquals(0, src.captureCalls)
+    }
+
+    @Test
     fun `no foreground app is a failure and nothing is captured`() {
         val src = FakeScreenSource(null)
 
