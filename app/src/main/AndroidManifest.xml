@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- allowBackup=false a proposito: la configuracion y (mas adelante) las credenciales cifradas
+         dependen de una clave del Android Keystore que NO viaja en una copia de seguridad. Restaurar
+         datos sin su clave los dejaria ilegibles, y un backup por adb podria sacar datos del
+         dispositivo. -->
+    <application
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:supportsRtl="true" />
+
+</manifest>

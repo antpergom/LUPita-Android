@@ -21,12 +21,15 @@
       -Changed          deduce los tests desde git: Foo.kt -> *FooTest (convencion, sin indice).
       (sin parametros)  test + lint + assemble + instalar. Puerta antes de commit.
 
-    REQUISITOS DEL BUILD (F0, paso 1) - este script los da por hechos:
-      1. Tarea raiz `test` que cubra modulos JVM y Android. Para no ejecutar dos veces los tests de
-         Android, deshabilitar testReleaseUnitTest en los modulos Android.
-      2. `filter { isFailOnNoMatchingTests = false }` en TODAS las tareas Test. Sin esto, un
-         --tests que solo coincide en un modulo hace FALLAR a los demas ("No tests found").
-      3. Cada modulo tiene su build.gradle.kts versionado (asi se localizan sus resultados).
+    REQUISITOS DEL BUILD - este script los da por hechos (los cumple build.gradle.kts raiz):
+      1. `gradlew test` cubre modulos JVM y Android; testReleaseUnitTest esta deshabilitado en los
+         Android para no ejecutar los tests dos veces.
+      2. El filtro llega por PROPIEDAD (-PlupitaTests=a,b), NO por `--tests`: en Android `test` es una
+         tarea de ciclo de vida y Gradle rechaza `--tests` si alguna tarea con ese nombre no lo
+         soporta (comprobado con el primer build real, 2026-09-21).
+      3. `isFailOnNoMatchingTests = false` en TODAS las tareas Test: un patron que solo coincide en
+         un modulo no debe hacer fallar a los demas.
+      4. Cada modulo tiene su build.gradle.kts versionado (asi se localizan sus resultados).
 
     Solo ASCII a proposito: Windows PowerShell 5.1 lee mal un .ps1 UTF-8 sin BOM con acentos.
 
@@ -70,9 +73,11 @@ if (-not (Test-Path $gradlew)) {
 
 # --- Utilidades --------------------------------------------------------------------------------
 
-# Directorios de modulo = los que tienen un build.gradle.kts versionado (rapido: no recorre build/).
+# Directorios de modulo = los que tienen un build.gradle.kts (rapido: no recorre build/). Incluye
+# los aun SIN commitear (--others): con `ls-files` a secas un modulo recien creado contaba "0 tests"
+# en silencio, un falso verde (visto en el primer build real, 2026-09-21).
 function Get-ModuleDirs {
-    $files = & git -C $projectRoot ls-files "build.gradle.kts" "*/build.gradle.kts" 2>$null
+    $files = & git -C $projectRoot ls-files --cached --others --exclude-standard "build.gradle.kts" "*/build.gradle.kts" 2>$null
     foreach ($f in $files) {
         $d = Split-Path -Parent (Join-Path $projectRoot $f)
         if ($d) { $d } else { $projectRoot }
@@ -81,13 +86,17 @@ function Get-ModuleDirs {
 
 # Errores del compilador de Kotlin: "e: file:///C:/x/Foo.kt:12:5 mensaje" -> "Foo.kt:12 mensaje".
 function Get-CompileErrors([string]$LogFile) {
-    $rx = '^e: (?:file:///)?(?<f>.+?\.kt):(?<l>\d+):(?<c>\d+)\s+(?<m>.*)$'
-    foreach ($line in (Select-String -Path $LogFile -Pattern '^e: ' -CaseSensitive)) {
-        $m = [regex]::Match($line.Line.Trim(), $rx)
+    $rx = '^e: (?:file:///)?(?<f>.+?\.kt):(?<l>\d+):(?<c>\d+)\s*(?<m>.*)$'
+    foreach ($hit in (Select-String -Path $LogFile -Pattern '^e: ' -CaseSensitive -Context 0, 1)) {
+        $m = [regex]::Match($hit.Line.Trim(), $rx)
         if ($m.Success) {
-            "{0}:{1} {2}" -f (Split-Path -Leaf $m.Groups['f'].Value), $m.Groups['l'].Value, $m.Groups['m'].Value
+            $msg = $m.Groups['m'].Value
+            # Kotlin 2.x deja el mensaje en la linea SIGUIENTE ("e: file:///X.kt:3:8 " + "Unresolved
+            # reference..."), comprobado con salida real; el formato de una sola linea tambien vale.
+            if (-not $msg -and $hit.Context.PostContext.Count -gt 0) { $msg = $hit.Context.PostContext[0].Trim() }
+            "{0}:{1} {2}" -f (Split-Path -Leaf $m.Groups['f'].Value), $m.Groups['l'].Value, $msg
         } else {
-            $line.Line.Trim()
+            $hit.Line.Trim()
         }
     }
 }
@@ -173,18 +182,32 @@ function Run-Stage([string]$Name, [string[]]$GradleArgs, [string]$Kind) {
             $extra = ", {0} tests, {1} saltados" -f $r.Total, $r.Skipped
         }
         Write-Host "OK ($secs$extra)" -ForegroundColor Green
+        # Un verde con 0 tests casi nunca es real (se habia colado un falso verde): avisar.
+        if ($Kind -eq "test" -and $r.Total -eq 0) {
+            Write-Host "    AVISO: 0 tests ejecutados o no localizados - no lo des por bueno sin mirar el log." -ForegroundColor Yellow
+        }
         return $true
     }
 
     Write-Host "FAIL ($secs)" -ForegroundColor Red
+    $printed = $false
     $compile = @(Get-CompileErrors $logFile)
     if ($compile.Count -gt 0) {
+        $printed = $true
         Write-Host ("  compilacion: {0} error(es)" -f $compile.Count) -ForegroundColor DarkYellow
         Write-Capped $compile "DarkYellow"
+    }
+    # Fronteras entre modulos (:tools:boundaries): lineas "  :modulo: mensaje" en stderr.
+    $bounds = @(Select-String -Path $logFile -Pattern '^  :[\w:]+: ' | ForEach-Object { $_.Line.Trim() })
+    if ($bounds.Count -gt 0) {
+        $printed = $true
+        Write-Host ("  fronteras: {0} violacion(es)" -f $bounds.Count) -ForegroundColor DarkYellow
+        Write-Capped $bounds "DarkYellow"
     }
     if ($Kind -eq "test") {
         $r = Get-TestReport ($started.AddSeconds(-2))
         if ($r.Failed -gt 0) {
+            $printed = $true
             Write-Host ("  tests: {0} fallo(s) de {1}" -f $r.Failed, $r.Total) -ForegroundColor DarkYellow
             Write-Capped $r.Failures "DarkYellow"
         }
@@ -192,12 +215,15 @@ function Run-Stage([string]$Name, [string[]]$GradleArgs, [string]$Kind) {
     if ($Kind -eq "lint") {
         $lint = @(Get-LintIssues)
         if ($lint.Count -gt 0) {
+            $printed = $true
             Write-Host ("  lint: {0} error(es)" -f $lint.Count) -ForegroundColor DarkYellow
             Write-Capped $lint "DarkYellow"
         }
     }
-    if ($compile.Count -eq 0 -and $Kind -ne "test" -and $Kind -ne "lint") {
-        # Fallo que no es de compilador ni de tests (configuracion, dependencias...): solo el motivo.
+    if (-not $printed) {
+        # Nada reconocible (configuracion, dependencias, opcion desconocida...): el motivo de Gradle.
+        # Antes solo se hacia para fases que no eran de test/lint y un fallo de configuracion en la
+        # fase de tests salia sin ninguna explicacion (visto en el primer build real).
         $why = Select-String -Path $logFile -Pattern "What went wrong" -Context 0, 3 | Select-Object -First 1
         if ($why) { Write-Capped ($why.Context.PostContext | Where-Object { $_.Trim() }) "DarkYellow" }
     }
@@ -244,7 +270,8 @@ if ($Tests -or $Changed) {
     }
     Write-Host ("  modo rapido: {0}" -f ($patterns -join ", ")) -ForegroundColor Yellow
     Write-Host "  (no sustituye la pasada completa antes de commit)`n" -ForegroundColor DarkGray
-    $args = @($unitTests) + ($patterns | ForEach-Object { @("--tests", $_) })
+    # Por propiedad, no por `--tests` (ver build.gradle.kts raiz): en Android `test` no es de tipo Test.
+    $args = @($unitTests) + @("-PlupitaTests=" + ($patterns -join ","))
     if (-not (Run-Stage "tests" $args "test")) { exit 1 }
     exit 0
 }
