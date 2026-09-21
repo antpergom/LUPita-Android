@@ -9,6 +9,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.WindowInsets
 import android.view.WindowManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -305,7 +306,8 @@ class BubbleOverlay(
         val window = bubbleWindow ?: return
         val bounds = windowManager.currentWindowMetrics.bounds
         val w = window.view.width.takeIf { it > 0 } ?: windowPx
-        val edgeX = if (window.params.x + w / 2 < bounds.width() / 2) 0 else bounds.width() - w
+        val gap = edgeGapPx()
+        val edgeX = if (window.params.x + w / 2 < bounds.width() / 2) gap else bounds.width() - w - gap
         moveTo(edgeX, window.params.y)
         val settled = BubblePosition(window.params.x, window.params.y)
         scope.launch { settings.setPosition(settled) }
@@ -313,10 +315,25 @@ class BubbleOverlay(
 
     private fun defaultPosition(): BubblePosition {
         val bounds = windowManager.currentWindowMetrics.bounds
-        return BubblePosition(x = bounds.width() - windowPx, y = bounds.height() / 3)
+        return BubblePosition(x = bounds.width() - windowPx - edgeGapPx(), y = bounds.height() / 3)
+    }
+
+    /**
+     * Separacion extra entre la ventana de la burbuja y el borde de la pantalla, para que tocar la burbuja
+     * no dispare el gesto de navegacion (atras) del sistema: lo que falte hasta el margen de gestos del
+     * sistema (ya descontado el margen propio de la ventana) mas [EDGE_EXTRA_DP].
+     */
+    private fun edgeGapPx(): Int {
+        val gestures = windowManager.currentWindowMetrics.windowInsets
+            .getInsets(WindowInsets.Type.systemGestures())
+        val system = maxOf(gestures.left, gestures.right)
+        return maxOf(system - marginPx, 0) + (EDGE_EXTRA_DP * density).roundToInt()
     }
 
     private companion object {
         const val TAG = "LupitaOverlay"
+
+        /** Holgura adicional sobre el margen de gestos del sistema (pedida por el usuario: un par de pixeles). */
+        const val EDGE_EXTRA_DP = 2
     }
 }

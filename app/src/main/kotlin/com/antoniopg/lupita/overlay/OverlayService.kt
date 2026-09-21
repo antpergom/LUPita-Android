@@ -23,6 +23,7 @@ import com.antoniopg.lupita.capability.screen.AccessibilityScreenSource
 import com.antoniopg.lupita.capability.screen.RegionImage
 import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.ContextBundle
+import com.antoniopg.lupita.core.model.EncodedImage
 import com.antoniopg.lupita.core.model.SelectionRect
 import com.antoniopg.lupita.ui.overlay.BubbleOverlay
 import java.io.File
@@ -101,15 +102,17 @@ class OverlayService : Service() {
                 getString(R.string.capture_protected, bundle.header.decisionSource.name)
             } else {
                 val image = content.pixels
-                val webp = image?.let { withContext(Dispatchers.Default) { RegionImage.encodeWebpLossless(it) } }
-                if (webp != null && image != null) debugSave(bundle, webp, image.width, image.height)
+                val encoded = image?.let {
+                    withContext(Dispatchers.Default) { RegionImage.encode(it, content.provenance, CAPTURE_SETTLE_MS) }
+                }
+                if (encoded != null) debugSave(bundle, encoded)
                 getString(
                     R.string.capture_read,
                     bundle.header.tier.name,
                     content.nodes.sumOf { n -> n.flatten().count() },
                     image?.width ?: 0,
                     image?.height ?: 0,
-                    (webp?.size ?: 0) / 1024,
+                    (encoded?.bytes?.size ?: 0) / 1024,
                     ms,
                 )
             }
@@ -121,15 +124,16 @@ class OverlayService : Service() {
      * volcado del arbol en el almacenamiento privado, para medir tamanos y comprobar el filtrado por `adb`.
      * Es el germen del grabador de fixtures (F1.5); no se sube ni se versiona.
      */
-    private fun debugSave(bundle: ContextBundle, webp: ByteArray, w: Int, h: Int) {
+    private fun debugSave(bundle: ContextBundle, encoded: EncodedImage) {
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) return
         runCatching {
             val dir = File(filesDir, "debug-captures").apply { mkdirs() }
             val stamp = System.currentTimeMillis()
-            File(dir, "$stamp.webp").writeBytes(webp)
+            File(dir, "$stamp.webp").writeBytes(encoded.bytes)
             File(dir, "$stamp.txt").writeText(
                 buildString {
-                    appendLine("app=${bundle.header.packageName} tier=${bundle.header.tier} image=${w}x$h webp=${webp.size}")
+                    appendLine("app=${bundle.header.packageName} tier=${bundle.header.tier}")
+                    appendLine("record=${encoded.record.toJson()}")
                     appendLine("header=${bundle.header}")
                     bundle.content?.nodes?.forEach { root ->
                         root.flatten().forEach { n ->

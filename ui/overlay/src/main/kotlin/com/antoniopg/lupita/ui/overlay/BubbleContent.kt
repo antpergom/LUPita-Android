@@ -69,24 +69,26 @@ internal fun BubbleContent(activeCount: Int) {
                     tint = if (active) c.onAccent else c.ink,
                     modifier = Modifier.size(26.dp),
                 )
-                if (activeCount > 1) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .offset(x = 5.dp, y = (-5).dp)
-                            .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp)
-                            .background(c.ink, CircleShape)
-                            .border(2.dp, c.background, CircleShape)
-                            .padding(horizontal = 4.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = activeCount.toString(),
-                            color = c.background,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                        )
-                    }
+            }
+            // Hermana del circulo, no hija: `shadow` recorta a la forma del circulo y la insignia (que se
+            // sale de el a proposito) salia cortada por su contorno.
+            if (activeCount > 1) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 5.dp, y = (-5).dp)
+                        .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp)
+                        .background(c.ink, CircleShape)
+                        .border(2.dp, c.background, CircleShape)
+                        .padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = activeCount.toString(),
+                        color = c.background,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
                 }
             }
         }

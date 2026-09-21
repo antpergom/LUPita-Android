@@ -38,7 +38,7 @@ class AccessibilityScreenSource(private val context: Context) : ScreenSource {
             is Shot.Failure -> return CaptureResult.Failed(shot.reason, shot.detail)
             is Shot.Success -> shot.bitmap
         }
-        val pixels = try {
+        val cropped = try {
             RegionImage.crop(bitmap, request.region)
         } finally {
             bitmap.recycle()
@@ -48,7 +48,7 @@ class AccessibilityScreenSource(private val context: Context) : ScreenSource {
         val pkg = root.packageName?.toString() ?: return CaptureResult.Failed(CaptureFailure.NO_FOREGROUND_APP)
         val tree = TreeMapper.map(root, request.region)
         return CaptureResult.Captured(
-            RawCapture(pkg, request.region, tree.roots, pixels, System.currentTimeMillis()),
+            RawCapture(pkg, request.region, tree.roots, cropped.pixels, System.currentTimeMillis(), cropped.provenance),
         )
     }
 

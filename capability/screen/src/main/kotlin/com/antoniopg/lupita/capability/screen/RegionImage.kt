@@ -5,23 +5,36 @@ import android.graphics.Canvas
 import android.graphics.ColorSpace
 import android.graphics.Paint
 import android.graphics.Rect
+import android.os.Build
+import android.os.SystemClock
+import com.antoniopg.lupita.core.model.EncodedImage
+import com.antoniopg.lupita.core.model.ImagePipeline
+import com.antoniopg.lupita.core.model.ImageProcessingRecord
+import com.antoniopg.lupita.core.model.ImageProvenance
 import com.antoniopg.lupita.core.model.ImageSizing
 import com.antoniopg.lupita.core.model.PixelBuffer
 import com.antoniopg.lupita.core.model.SelectionRect
 import java.io.ByteArrayOutputStream
 
 /**
- * De la captura completa a la imagen que se envia (decision 2026-09-22): recorta la region, la pasa a sRGB,
- * la reduce (solo hacia abajo, tope por area) en UN solo dibujado, y la codifica una vez en WebP sin perdida.
+ * De la captura completa a la imagen que se envia (decision 2026-09-22): recorta la region, la pasa a sRGB, la
+ * reduce (solo hacia abajo, tope por area) en UN solo dibujado y la codifica una vez ([ImagePipeline]). Cada
+ * paso deja constancia en un [ImageProvenance] / [ImageProcessingRecord] para poder comparar variantes.
  */
 object RegionImage {
 
+    internal class Cropped(val pixels: PixelBuffer, val provenance: ImageProvenance)
+
+    private const val RESAMPLING = "canvas-bilinear"
+    private const val ENCODER = "android-bitmap-compress"
+
     /** [full] puede ser de hardware; se copia a software antes de tocarla. El llamador la libera. */
-    internal fun crop(full: Bitmap, region: SelectionRect): PixelBuffer {
+    internal fun crop(full: Bitmap, region: SelectionRect): Cropped {
         val left = region.left.coerceIn(0, full.width - 1)
         val top = region.top.coerceIn(0, full.height - 1)
         val src = Rect(left, top, region.right.coerceIn(left + 1, full.width), region.bottom.coerceIn(top + 1, full.height))
         val size = ImageSizing.fit(src.width(), src.height())
+        val sourceSpace = full.colorSpace?.name
 
         val soft = if (full.config == Bitmap.Config.HARDWARE) full.copy(Bitmap.Config.ARGB_8888, false) else full
         // Dibujar sobre un bitmap sRGB es lo que convierte el color (Display P3 -> sRGB); copy() no lo hace.
@@ -32,16 +45,43 @@ object RegionImage {
         val pixels = IntArray(size.width * size.height)
         out.getPixels(pixels, 0, size.width, 0, 0, size.width, size.height)
         out.recycle()
-        return PixelBuffer(size.width, size.height, pixels)
+        return Cropped(
+            PixelBuffer(size.width, size.height, pixels),
+            ImageProvenance(
+                regionWidth = src.width(),
+                regionHeight = src.height(),
+                outputWidth = size.width,
+                outputHeight = size.height,
+                sourceColorSpace = sourceSpace,
+                resampling = RESAMPLING,
+                maxAreaPx = ImageSizing.MAX_AREA_PX,
+            ),
+        )
     }
 
-    /** WebP sin perdida. La calidad, en lossless, es esfuerzo de compresion: 100 = fichero mas pequeno. */
-    fun encodeWebpLossless(image: PixelBuffer): ByteArray {
+    /** Codifica una vez, segun [ImagePipeline], y devuelve los bytes con el registro de como se obtuvieron. */
+    fun encode(image: PixelBuffer, provenance: ImageProvenance?, settleMs: Long? = null): EncodedImage {
+        val started = SystemClock.elapsedRealtime()
         val bitmap = Bitmap.createBitmap(image.argb, image.width, image.height, Bitmap.Config.ARGB_8888)
-        return ByteArrayOutputStream().use { out ->
-            bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, out)
+        val bytes = ByteArrayOutputStream().use { out ->
+            bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, ImagePipeline.QUALITY, out)
             bitmap.recycle()
             out.toByteArray()
         }
+        return EncodedImage(
+            bytes,
+            ImageProcessingRecord(
+                pipelineVersion = ImagePipeline.VERSION,
+                provenance = provenance,
+                format = ImagePipeline.FORMAT,
+                mime = ImagePipeline.MIME,
+                quality = ImagePipeline.QUALITY,
+                encoder = ENCODER,
+                encodedBytes = bytes.size,
+                encodeMs = SystemClock.elapsedRealtime() - started,
+                androidSdk = Build.VERSION.SDK_INT,
+                settleMs = settleMs,
+            ),
+        )
     }
 }

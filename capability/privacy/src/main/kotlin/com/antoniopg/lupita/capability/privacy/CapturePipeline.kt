@@ -97,7 +97,7 @@ class CapturePipeline(private val source: ScreenSource, private val gate: Privac
                 redactions = stats.redactions.mapKeys { it.key.token },
                 suggestion = decision.suggestion,
             ),
-            content = CapturedContent(region, nodes, raw.pixels),
+            content = CapturedContent(region, nodes, raw.pixels, raw.provenance),
             requiresPreview = decision.tier == PrivacyTier.SENSITIVE &&
                 settings.isEnabled(SecurityMeasure.PREVIEW_BEFORE_SEND),
         )

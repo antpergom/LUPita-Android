@@ -48,6 +48,8 @@ class RawCapture(
     val nodes: List<UiNode>,
     val pixels: PixelBuffer?,
     val capturedAtMillis: Long,
+    /** Como se obtuvo la imagen (recorte, reduccion, color): se guarda con ella para comparar variantes. */
+    val provenance: ImageProvenance? = null,
 )
 
 enum class CaptureFailure {

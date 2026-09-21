@@ -24,7 +24,12 @@ data class ContextHeader(
 )
 
 /** Lo leido de la region, ya filtrado y redactado. */
-class CapturedContent(val region: SelectionRect, val nodes: List<UiNode>, val pixels: PixelBuffer?)
+class CapturedContent(
+    val region: SelectionRect,
+    val nodes: List<UiNode>,
+    val pixels: PixelBuffer?,
+    val provenance: ImageProvenance? = null,
+)
 
 /**
  * Resultado de capturar con privacidad: [content] es `null` para una app protegida. [requiresPreview]
