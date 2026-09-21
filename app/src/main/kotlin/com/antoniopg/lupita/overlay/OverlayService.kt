@@ -88,9 +88,9 @@ class OverlayService : Service() {
             delay(CAPTURE_SETTLE_MS)
             val accessibility = AccessibilityScreenSource(this@OverlayService)
             when {
-                accessibility.isAvailable -> runCapture(accessibility, rect)
+                accessibility.isAvailable -> runCapture(accessibility, rect, CAPTURE_SETTLE_MS)
                 // Respaldo sin accesibilidad: solo pixeles, y hace falta el permiso de proyeccion (por sesion).
-                ProjectionSession.isActive -> runCapture(ProjectionScreenSource(), rect)
+                ProjectionSession.isActive -> runCapture(ProjectionScreenSource(), rect, CAPTURE_SETTLE_MS)
                 else -> requestProjection(rect)
             }
         }
@@ -107,21 +107,21 @@ class OverlayService : Service() {
             if (region != null) {
                 scope.launch {
                     delay(PROJECTION_SETTLE_MS)
-                    runCapture(ProjectionScreenSource(), region)
+                    runCapture(ProjectionScreenSource(), region, CAPTURE_SETTLE_MS + PROJECTION_SETTLE_MS)
                 }
             }
         }
         startActivity(Intent(this, ProjectionConsentActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
-    private suspend fun runCapture(source: ScreenSource, rect: SelectionRect) {
+    private suspend fun runCapture(source: ScreenSource, rect: SelectionRect, settleMs: Long) {
         val container = (application as LupitaApp).container
         val settings = container.privacySettings.settings.first()
         val started = SystemClock.elapsedRealtime()
         val outcome = withContext(Dispatchers.Default) {
             CapturePipeline(source, container.privacyGate).run(rect, settings)
         }
-        toast(summarize(outcome, SystemClock.elapsedRealtime() - started))
+        toast(summarize(outcome, SystemClock.elapsedRealtime() - started, settleMs))
     }
 
     /** Quita la burbuja y cierra la app: la X de abajo y el boton del panel. */
@@ -132,7 +132,7 @@ class OverlayService : Service() {
         stopSelf()
     }
 
-    private suspend fun summarize(outcome: CapturePipeline.Outcome, ms: Long): String = when (outcome) {
+    private suspend fun summarize(outcome: CapturePipeline.Outcome, ms: Long, settleMs: Long): String = when (outcome) {
         is CapturePipeline.Outcome.Failed ->
             getString(R.string.capture_failed, outcome.reason.name, outcome.detail ?: "-")
 
@@ -144,7 +144,7 @@ class OverlayService : Service() {
             } else {
                 val image = content.pixels
                 val encoded = image?.let {
-                    withContext(Dispatchers.Default) { RegionImage.encode(it, content.provenance, CAPTURE_SETTLE_MS) }
+                    withContext(Dispatchers.Default) { RegionImage.encode(it, content.provenance, settleMs) }
                 }
                 if (encoded != null) debugSave(bundle, encoded)
                 getString(
