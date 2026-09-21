@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.RequiredPermission
 import com.antoniopg.lupita.ui.app.R
 
@@ -54,26 +53,3 @@ private fun PermissionCard(permission: RequiredPermission, onRequest: () -> Unit
     }
 }
 
-/**
- * Provisional (F0): se sustituye por la pantalla de Configuracion e Historial en el paso 5. Por ahora
- * solo muestra a que seccion se ha pedido ir desde el menu de la burbuja.
- */
-@Composable
-fun ServiceActiveScreen(requestedSection: AppSection? = null, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text(stringResource(R.string.service_active_title), style = MaterialTheme.typography.headlineMedium)
-        Text(stringResource(R.string.service_active_body), style = MaterialTheme.typography.bodyLarge)
-        if (requestedSection != null) {
-            val name = stringResource(
-                when (requestedSection) {
-                    AppSection.SETTINGS -> R.string.section_settings
-                    AppSection.HISTORY -> R.string.section_history
-                },
-            )
-            Text(stringResource(R.string.section_requested, name), style = MaterialTheme.typography.titleMedium)
-        }
-    }
-}

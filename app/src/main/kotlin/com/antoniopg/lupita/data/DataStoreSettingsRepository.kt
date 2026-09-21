@@ -24,9 +24,17 @@ import kotlinx.coroutines.flow.map
  */
 class DataStoreSettingsRepository(private val dataStore: DataStore<Preferences>) : SettingsRepository {
 
-    override val settings: Flow<BubbleSettings> = dataStore.data
-        // Fichero ilegible: se trata como configuracion de fabrica en vez de fallar.
+    // Fichero ilegible: se trata como configuracion de fabrica en vez de fallar.
+    private val safeData: Flow<Preferences> = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+
+    override val modelId: Flow<String?> = safeData.map { it[MODEL_ID] }
+
+    override suspend fun setModelId(id: String) {
+        dataStore.edit { it[MODEL_ID] = id }
+    }
+
+    override val settings: Flow<BubbleSettings> = safeData
         .map { prefs ->
             BubbleSettings(
                 enabledTools = prefs[ENABLED_TOOLS].orEmpty().mapNotNull(ToolId::fromKey).toSet(),
@@ -56,6 +64,7 @@ class DataStoreSettingsRepository(private val dataStore: DataStore<Preferences>)
     private companion object {
         val ENABLED_TOOLS = stringSetPreferencesKey("enabled_tools")
         val DEPTH = stringPreferencesKey("depth")
+        val MODEL_ID = stringPreferencesKey("model_id")
         val POSITION_X = intPreferencesKey("bubble_x")
         val POSITION_Y = intPreferencesKey("bubble_y")
     }

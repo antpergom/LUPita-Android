@@ -1,0 +1,103 @@
+package com.antoniopg.lupita.ui.app
+
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.antoniopg.lupita.core.model.AppSection
+import com.antoniopg.lupita.core.model.LanguageOption
+import com.antoniopg.lupita.core.model.ModelOption
+import com.antoniopg.lupita.ui.app.history.HistoryScreen
+import com.antoniopg.lupita.ui.app.settings.SettingsScreen
+import com.antoniopg.lupita.ui.theme.Lupita
+
+/**
+ * La app: Ajustes (principal) e Historial en la misma ventana, con barra de navegacion inferior.
+ *
+ * [requestedSection] es una PETICION (p. ej. desde el menu de la burbuja), no un estado: se aplica y se
+ * avisa con [onRequestConsumed] para que quien la guarda la olvide. Asi pedir «Ajustes» estando ya en
+ * «Historial» cambia de pestana aunque el valor pedido sea igual que la vez anterior.
+ */
+@Composable
+fun AppScreen(
+    requestedSection: AppSection?,
+    onRequestConsumed: () -> Unit,
+    appName: String,
+    appVersion: String,
+    models: List<ModelOption>,
+    selectedModelId: String?,
+    onSelectModel: (String) -> Unit,
+    languages: List<LanguageOption>,
+    currentLanguage: String,
+    onSelectLanguage: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = Lupita.colors
+    var sectionKey by rememberSaveable { mutableStateOf((requestedSection ?: AppSection.SETTINGS).key) }
+    LaunchedEffect(requestedSection) {
+        if (requestedSection != null) {
+            sectionKey = requestedSection.key
+            onRequestConsumed()
+        }
+    }
+    val section = AppSection.fromKey(sectionKey) ?: AppSection.SETTINGS
+
+    Scaffold(
+        modifier = modifier,
+        containerColor = c.background,
+        bottomBar = {
+            NavigationBar(containerColor = c.background) {
+                val colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = c.onAccent,
+                    selectedTextColor = c.ink,
+                    indicatorColor = c.accent,
+                    unselectedIconColor = c.subtle,
+                    unselectedTextColor = c.subtle,
+                )
+                NavigationBarItem(
+                    selected = section == AppSection.SETTINGS,
+                    onClick = { sectionKey = AppSection.SETTINGS.key },
+                    icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                    label = { Text(stringResource(R.string.section_settings)) },
+                    colors = colors,
+                )
+                NavigationBarItem(
+                    selected = section == AppSection.HISTORY,
+                    onClick = { sectionKey = AppSection.HISTORY.key },
+                    icon = { Icon(Icons.Rounded.History, contentDescription = null) },
+                    label = { Text(stringResource(R.string.section_history)) },
+                    colors = colors,
+                )
+            }
+        },
+    ) { padding ->
+        when (section) {
+            AppSection.SETTINGS -> SettingsScreen(
+                appName = appName,
+                appVersion = appVersion,
+                models = models,
+                selectedModelId = selectedModelId,
+                onSelectModel = onSelectModel,
+                languages = languages,
+                currentLanguage = currentLanguage,
+                onSelectLanguage = onSelectLanguage,
+                modifier = Modifier.padding(padding),
+            )
+            AppSection.HISTORY -> HistoryScreen(modifier = Modifier.padding(padding))
+        }
+    }
+}

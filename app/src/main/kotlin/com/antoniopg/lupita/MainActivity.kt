@@ -12,23 +12,32 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.antoniopg.lupita.core.model.AppSection
+import com.antoniopg.lupita.core.model.ModelCatalog
 import com.antoniopg.lupita.core.model.PermissionState
 import com.antoniopg.lupita.core.model.RequiredPermission
 import com.antoniopg.lupita.overlay.OverlayService
+import com.antoniopg.lupita.ui.app.AppScreen
 import com.antoniopg.lupita.ui.app.onboarding.OnboardingScreen
-import com.antoniopg.lupita.ui.app.onboarding.ServiceActiveScreen
 import com.antoniopg.lupita.ui.theme.LupitaTheme
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+
+/** Envoltorio para distinguir «aun no leido» (`null`) de «leido y sin modelo elegido» (`StoredModel(null)`). */
+private data class StoredModel(val id: String?)
 
 class MainActivity : ComponentActivity() {
 
     private var permissions by mutableStateOf(PermissionState(overlay = false, notifications = false))
 
-    /** Seccion pedida desde el menu de la burbuja (paso 5 la muestra de verdad). */
+    /** Peticion de seccion desde el menu de la burbuja; la pantalla la aplica y la olvida. */
     private var section by mutableStateOf<AppSection?>(null)
 
     private val requestNotifications =
@@ -47,7 +56,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        section = AppSection.fromKey(intent?.getStringExtra(EXTRA_SECTION))
+        // Solo la PRIMERA vez: al cambiar de idioma Android recrea la Activity con el mismo Intent, y
+        // releerlo volveria a aplicar la seccion pedida por la burbuja (te sacaria de Ajustes).
+        if (savedInstanceState == null) {
+            section = AppSection.fromKey(intent?.getStringExtra(EXTRA_SECTION))
+        }
+        val container = (application as LupitaApp).container
+        val appVersion = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
         setContent {
             // Tema del mock (claro/oscuro segun el sistema). La Surface fija fondo y color de texto
             // coherentes: sin ella el texto salia oscuro sobre fondo oscuro (visto en el dispositivo).
@@ -55,7 +70,24 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val missing = permissions.missing()
                     if (missing.isEmpty()) {
-                        ServiceActiveScreen(requestedSection = section)
+                        val scope = rememberCoroutineScope()
+                        val catalog = container.modelCatalog
+                        // `null` = todavia no se ha leido lo guardado: no se resalta ninguno (en vez de
+                        // mostrar un instante el primero y saltar despues al elegido).
+                        val stored by remember { container.settings.modelId.map(::StoredModel) }
+                            .collectAsState(initial = null)
+                        AppScreen(
+                            requestedSection = section,
+                            onRequestConsumed = { section = null },
+                            appName = getString(R.string.app_name),
+                            appVersion = appVersion,
+                            models = catalog,
+                            selectedModelId = stored?.let { ModelCatalog.effectiveSelection(catalog, it.id) },
+                            onSelectModel = { id -> scope.launch { container.settings.setModelId(id) } },
+                            languages = container.language.supported,
+                            currentLanguage = container.language.current(),
+                            onSelectLanguage = container.language::set,
+                        )
                     } else {
                         OnboardingScreen(missing = missing, onRequest = ::request)
                     }

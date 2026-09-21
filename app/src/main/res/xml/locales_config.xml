@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Idiomas de la app (Android 13+): aparecen tambien en los ajustes del sistema. Mantener alineado con
+     Languages.supported en :core:model y con las carpetas values-xx/. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="es" />
+    <locale android:name="en" />
+</locale-config>

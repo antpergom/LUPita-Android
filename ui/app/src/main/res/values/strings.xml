@@ -9,9 +9,19 @@
     <string name="permission_notifications_description">Es la única forma de apagar la burbuja: sin ella no habría manera de cerrarla.</string>
     <string name="permission_grant">Conceder</string>
 
-    <string name="service_active_title">LUPita está activa</string>
     <string name="section_settings">Ajustes</string>
     <string name="section_history">Historial</string>
-    <string name="section_requested">Sección pedida desde la burbuja: %1$s (llega en el paso 5)</string>
-    <string name="service_active_body">La burbuja flota sobre las demás apps. Para apagarla, usa el botón de su notificación.</string>
+
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_info">Información</string>
+    <string name="settings_info_app">Aplicación</string>
+    <string name="settings_info_version">Versión</string>
+    <string name="settings_model">Modelo de IA</string>
+    <string name="settings_model_empty">Todavía no hay modelos configurados.</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_more">Más idiomas próximamente.</string>
+
+    <string name="history_title">Historial</string>
+    <string name="history_empty_title">Aún no hay análisis</string>
+    <string name="history_empty_body">Los análisis que hagas aparecerán aquí, con su fecha, la zona capturada y las herramientas usadas.</string>
 </resources>

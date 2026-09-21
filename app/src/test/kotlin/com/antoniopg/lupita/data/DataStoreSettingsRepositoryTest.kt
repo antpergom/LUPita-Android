@@ -60,6 +60,27 @@ class DataStoreSettingsRepositoryTest {
     }
 
     @Test
+    fun `no model is chosen on first launch`() = runTest {
+        assertEquals(null, repo.modelId.first())
+    }
+
+    @Test
+    fun `the chosen model is remembered and survives an app restart`() = runTest {
+        repo.setModelId("gemini-2-5-pro")
+
+        assertEquals("gemini-2-5-pro", repo.modelId.first())
+        assertEquals("gemini-2-5-pro", DataStoreSettingsRepository(store).modelId.first())
+    }
+
+    @Test
+    fun `choosing a model does not disturb the bubble settings`() = runTest {
+        repo.setToolEnabled(ToolId.GENERAL, true)
+        repo.setModelId("x")
+
+        assertEquals(setOf(ToolId.GENERAL), repo.settings.first().enabledTools)
+    }
+
+    @Test
     fun `position is remembered`() = runTest {
         repo.setPosition(BubblePosition(120, 840))
 
