@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Ver las apps con icono en el lanzador (para elegir una al anadir una excepcion de privacidad) sin
+         pedir QUERY_ALL_PACKAGES, que exigiria justificacion en Google Play. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <!-- Dibujar la burbuja sobre otras apps. No se concede con un dialogo normal: la app lleva al
          usuario a los ajustes del sistema (ver MainActivity). -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />

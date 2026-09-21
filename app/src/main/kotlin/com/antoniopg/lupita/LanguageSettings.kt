@@ -23,6 +23,10 @@ class LanguageSettings(context: Context) {
         return Languages.resolve(appTag = app, systemTag = system)
     }
 
+    /** El pais del SISTEMA (no el de la app): decide que regiones de privacidad se activan de fabrica. */
+    fun systemCountry(): String? =
+        manager.systemLocales.takeIf { !it.isEmpty }?.get(0)?.country?.takeIf { it.isNotBlank() }
+
     /** Recrea la Activity con el idioma nuevo. */
     fun set(tag: String) {
         manager.applicationLocales = LocaleList.forLanguageTags(tag)

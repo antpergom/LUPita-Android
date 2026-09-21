@@ -4,9 +4,15 @@ import android.app.Application
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.preferencesDataStoreFile
+import com.antoniopg.lupita.capability.privacy.PrivacyCatalogParser
+import com.antoniopg.lupita.capability.privacy.PrivacyGate
 import com.antoniopg.lupita.core.model.ModelCatalog
 import com.antoniopg.lupita.core.model.ModelOption
+import com.antoniopg.lupita.core.model.PrivacyCatalog
+import com.antoniopg.lupita.core.model.PrivacyRegions
+import com.antoniopg.lupita.core.model.PrivacySettingsRepository
 import com.antoniopg.lupita.core.model.SettingsRepository
+import com.antoniopg.lupita.data.DataStorePrivacySettingsRepository
 import com.antoniopg.lupita.data.DataStoreSettingsRepository
 
 class LupitaApp : Application() {
@@ -26,10 +32,22 @@ class AppContainer(private val context: Context) {
 
     val language = LanguageSettings(context)
 
+    /** Configuracion de privacidad. De fabrica: global + el pais del sistema, y desconocidas = sensibles. */
+    val privacySettings: PrivacySettingsRepository =
+        DataStorePrivacySettingsRepository(dataStore, PrivacyRegions.defaultFor(language.systemCountry()))
+
     /** Modelos elegibles en Ajustes, leidos de `assets/model_catalog.json`. Sin fichero: lista vacia. */
     val modelCatalog: List<ModelOption> by lazy {
-        runCatching { context.assets.open("model_catalog.json").bufferedReader().use { it.readText() } }
-            .map(ModelCatalog::parse)
-            .getOrDefault(emptyList())
+        runCatching { readAsset("model_catalog.json") }.map(ModelCatalog::parse).getOrDefault(emptyList())
     }
+
+    /** Apps conocidas por la puerta de privacidad, de `assets/privacy_catalog.json`. Sin fichero: vacio (todo desconocido). */
+    val privacyCatalog: PrivacyCatalog by lazy {
+        runCatching { readAsset("privacy_catalog.json") }.map(PrivacyCatalogParser::parse).getOrDefault(PrivacyCatalog())
+    }
+
+    /** El unico punto que decide el nivel de una app; se consulta ANTES de capturar (F1.3). */
+    val privacyGate: PrivacyGate by lazy { PrivacyGate(privacyCatalog) }
+
+    private fun readAsset(name: String): String = context.assets.open(name).bufferedReader().use { it.readText() }
 }
