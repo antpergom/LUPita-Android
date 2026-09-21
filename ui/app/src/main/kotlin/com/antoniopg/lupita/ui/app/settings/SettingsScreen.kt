@@ -33,6 +33,7 @@ import com.antoniopg.lupita.core.model.LanguageOption
 import com.antoniopg.lupita.core.model.ModelOption
 import com.antoniopg.lupita.ui.app.R
 import com.antoniopg.lupita.ui.theme.Lupita
+import com.antoniopg.lupita.ui.theme.LupitaFonts
 
 /**
  * Ajustes (mock): informacion de la app, modelo de IA e idioma. El catalogo de modelos llega como
@@ -57,7 +58,13 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 16.dp),
     ) {
-        Text(stringResource(R.string.settings_title), color = c.ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(R.string.settings_title),
+            color = c.ink,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = LupitaFonts.heading,
+        )
         Spacer(Modifier.height(18.dp))
 
         SectionLabel(stringResource(R.string.settings_info))

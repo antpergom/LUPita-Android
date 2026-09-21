@@ -59,6 +59,7 @@ import com.antoniopg.lupita.core.model.BubbleSettings
 import com.antoniopg.lupita.core.model.Depth
 import com.antoniopg.lupita.core.model.ToolId
 import com.antoniopg.lupita.ui.theme.Lupita
+import com.antoniopg.lupita.ui.theme.LupitaFonts
 import com.antoniopg.lupita.ui.theme.LupitaTheme
 
 private val PANEL_WIDTH = 300.dp
@@ -160,7 +161,13 @@ private fun MenuPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(stringResource(R.string.menu_title), color = c.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(R.string.menu_title),
+                color = c.ink,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = LupitaFonts.heading,
+            )
             Text(
                 pluralStringResource(R.plurals.menu_active_count, activeCount, activeCount),
                 color = c.subtle,

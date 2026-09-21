@@ -2,11 +2,13 @@ package com.antoniopg.lupita.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 
 private val LocalLupitaColors = staticCompositionLocalOf { LightLupitaColors }
@@ -22,8 +24,7 @@ object Lupita {
  * `MaterialTheme` para que los componentes de Material (texto, tarjetas, botones) hereden los mismos
  * colores.
  *
- * Tipografia pendiente: el mock usa Ubuntu y Bricolage Grotesque (fuentes descargables); mientras
- * tanto se usa la fuente por defecto del sistema.
+ * Tipografia del mock: Ubuntu para el cuerpo y Bricolage Grotesque para los titulos (ver [LupitaFonts]).
  */
 @Composable
 fun LupitaTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
@@ -45,7 +46,12 @@ fun LupitaTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -
             surfaceContainerHighest = c.card, error = c.danger,
         )
     }
+    val typography = remember { lupitaTypography() }
     CompositionLocalProvider(LocalLupitaColors provides c) {
-        MaterialTheme(colorScheme = scheme, content = content)
+        MaterialTheme(colorScheme = scheme, typography = typography) {
+            // Un `Text` suelto no hereda la tipografia del tema (solo lo hacen los componentes de Material):
+            // se fija aqui para que TODO el texto salga en Ubuntu salvo los titulos.
+            ProvideTextStyle(typography.bodyMedium, content)
+        }
     }
 }

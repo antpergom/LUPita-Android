@@ -5,3 +5,6 @@ scripts/git-workflow/** text eol=lf
 gradlew text eol=lf
 gradlew.bat text eol=crlf
 *.jar binary
+
+# Fuentes empaquetadas (Ubuntu, Bricolage Grotesque): binarias, sin conversion de finales de linea.
+*.ttf binary

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.antoniopg.lupita.ui.app.R
 import com.antoniopg.lupita.ui.theme.Lupita
+import com.antoniopg.lupita.ui.theme.LupitaFonts
 
 /**
  * Historial. En F0 no hay analisis que listar (la persistencia llega con F4): solo el estado vacio. Las
@@ -28,7 +29,13 @@ import com.antoniopg.lupita.ui.theme.Lupita
 fun HistoryScreen(modifier: Modifier = Modifier) {
     val c = Lupita.colors
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp)) {
-        Text(stringResource(R.string.history_title), color = c.ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(R.string.history_title),
+            color = c.ink,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = LupitaFonts.heading,
+        )
         Column(
             modifier = Modifier.weight(1f).fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
