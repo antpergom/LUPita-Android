@@ -13,6 +13,7 @@
          una clave del Android Keystore que NO viaja en una copia de seguridad. Restaurar datos sin su
          clave los dejaria ilegibles, y un backup por adb podria sacar datos del dispositivo. -->
     <application
+        android:name=".LupitaApp"
         android:allowBackup="false"
         android:label="@string/app_name"
         android:supportsRtl="true"
