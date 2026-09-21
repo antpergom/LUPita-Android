@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.round
 import androidx.compose.ui.unit.sp
 import com.antoniopg.lupita.core.model.Selection
 import com.antoniopg.lupita.core.model.SelectionRect
@@ -54,8 +55,6 @@ import com.antoniopg.lupita.core.model.StrokeRecorder
 import com.antoniopg.lupita.core.model.TouchPoint
 import com.antoniopg.lupita.ui.theme.Lupita
 import com.antoniopg.lupita.ui.theme.LupitaTheme
-import kotlin.math.max
-import kotlin.math.min
 
 // rgba(10, 20, 22, .68) del mock.
 private val Scrim = Color(0xAD0A1416)
@@ -63,10 +62,6 @@ private val Scrim = Color(0xAD0A1416)
 // Tinta FIJA del boton de cancelar (#1C1A17 en el mock): la capa va siempre sobre un velo oscuro y no
 // depende del tema. Con la tinta del tema, en oscuro salia crema sobre crema y el icono no se veia.
 private val FixedInk = Color(0xFF1C1A17)
-
-// El overlay ocupa toda la pantalla, barra de estado incluida: reserva de espacio para no dibujar el
-// texto y el boton de cerrar debajo de ella (en un Pixel mide ~41 dp).
-private val TOP_INSET = 56.dp
 
 /**
  * Capa de captura (mock): la pantalla se atenua y el usuario dibuja a mano alzada la zona a analizar;
@@ -88,7 +83,7 @@ internal fun CaptureOverlay(
 ) {
     LupitaTheme {
         val c = Lupita.colors
-        val density = LocalDensity.current
+        val density = LocalDensity.current.density
         val cancel by rememberUpdatedState(onCancel)
         val recorder = remember { StrokeRecorder() }
         var stroke by remember { mutableStateOf(emptyList<TouchPoint>()) }
@@ -100,7 +95,15 @@ internal fun CaptureOverlay(
                 .background(Scrim)
                 .pointerInput(Unit) {
                     awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
+                        // Antes se pedia `requireUnconsumed = false`, o sea que un toque sobre un boton
+                        // tambien llegaba aqui. Por defecto, si un boton ya se lo ha quedado no es un trazo.
+                        val down = awaitFirstDown()
+                        // Cinturon y tirantes: un dedo real tiembla unos pixeles, asi que un toque sobre un
+                        // boton se convertia en un trazo diminuto que sustituia la seleccion por un cuadrado
+                        // del tamano minimo y se comia el clic del boton (visto en el dispositivo).
+                        if (CaptureLayout.startsOnControl(down.position.round(), selected, screenWidth, density)) {
+                            return@awaitEachGesture
+                        }
                         recorder.reset()
                         recorder.add(down.position.x, down.position.y)
                         stroke = recorder.points
@@ -163,15 +166,15 @@ internal fun CaptureOverlay(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = TOP_INSET),
+                modifier = Modifier.fillMaxWidth().padding(top = CaptureLayout.TOP_INSET_DP.dp),
             )
 
             val cancelText = stringResource(R.string.capture_cancel)
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = TOP_INSET - 8.dp, end = 12.dp)
-                    .size(34.dp)
+                    .padding(top = CaptureLayout.CLOSE_TOP_DP.dp, end = CaptureLayout.CLOSE_END_DP.dp)
+                    .size(CaptureLayout.CLOSE_SIZE_DP.dp)
                     .clip(CircleShape)
                     .background(Color.White.copy(alpha = 0.12f))
                     .clickable(role = Role.Button, onClick = onCancel),
@@ -181,12 +184,11 @@ internal fun CaptureOverlay(
             }
 
             selected?.let { r ->
-                // Encima del rectangulo (o pegados al borde superior) y sin salirse por la derecha.
-                val x = min(r.left, screenWidth - with(density) { 96.dp.roundToPx() })
-                val y = max(with(density) { 8.dp.roundToPx() }, r.top - with(density) { 50.dp.roundToPx() })
+                // La misma geometria que decide donde un toque NO es un trazo (ver CaptureLayout).
+                val buttons = CaptureLayout.actionButtons(r, screenWidth, density)
                 Row(
-                    modifier = Modifier.offset { IntOffset(x, y) },
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.offset { IntOffset(buttons.left, buttons.top) },
+                    horizontalArrangement = Arrangement.spacedBy(CaptureLayout.ACTION_GAP_DP.dp),
                 ) {
                     ActionButton(Icons.Rounded.Close, cancelText, c.onAccent, FixedInk, onCancel)
                     ActionButton(
@@ -205,7 +207,7 @@ internal fun CaptureOverlay(
 private fun ActionButton(icon: ImageVector, description: String, background: Color, tint: Color, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(CaptureLayout.ACTION_SIZE_DP.dp)
             .shadow(6.dp, CircleShape)
             .background(background, CircleShape)
             .clickable(role = Role.Button, onClick = onClick),
