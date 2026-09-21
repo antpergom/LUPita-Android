@@ -22,11 +22,14 @@ import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.LanguageOption
 import com.antoniopg.lupita.core.model.ModelOption
 import com.antoniopg.lupita.ui.app.history.HistoryScreen
+import com.antoniopg.lupita.ui.app.privacy.PrivacyScreen
+import com.antoniopg.lupita.ui.app.privacy.PrivacyUi
 import com.antoniopg.lupita.ui.app.settings.SettingsScreen
 import com.antoniopg.lupita.ui.theme.Lupita
 
 /**
- * La app: Ajustes (principal) e Historial en la misma ventana, con barra de navegacion inferior.
+ * La app: Ajustes (principal) e Historial en la misma ventana, con barra de navegacion inferior. Desde
+ * Ajustes se abre la ventana de Privacidad, que se cierra con «atras» o al cambiar de seccion.
  *
  * [requestedSection] es una PETICION (p. ej. desde el menu de la burbuja), no un estado: se aplica y se
  * avisa con [onRequestConsumed] para que quien la guarda la olvide. Asi pedir «Ajustes» estando ya en
@@ -44,13 +47,16 @@ fun AppScreen(
     languages: List<LanguageOption>,
     currentLanguage: String,
     onSelectLanguage: (String) -> Unit,
+    privacy: PrivacyUi,
     modifier: Modifier = Modifier,
 ) {
     val c = Lupita.colors
     var sectionKey by rememberSaveable { mutableStateOf((requestedSection ?: AppSection.SETTINGS).key) }
+    var showPrivacy by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(requestedSection) {
         if (requestedSection != null) {
             sectionKey = requestedSection.key
+            showPrivacy = false
             onRequestConsumed()
         }
     }
@@ -70,14 +76,20 @@ fun AppScreen(
                 )
                 NavigationBarItem(
                     selected = section == AppSection.SETTINGS,
-                    onClick = { sectionKey = AppSection.SETTINGS.key },
+                    onClick = {
+                        sectionKey = AppSection.SETTINGS.key
+                        showPrivacy = false
+                    },
                     icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                     label = { Text(stringResource(R.string.section_settings)) },
                     colors = colors,
                 )
                 NavigationBarItem(
                     selected = section == AppSection.HISTORY,
-                    onClick = { sectionKey = AppSection.HISTORY.key },
+                    onClick = {
+                        sectionKey = AppSection.HISTORY.key
+                        showPrivacy = false
+                    },
                     icon = { Icon(Icons.Rounded.History, contentDescription = null) },
                     label = { Text(stringResource(R.string.section_history)) },
                     colors = colors,
@@ -85,8 +97,10 @@ fun AppScreen(
             }
         },
     ) { padding ->
-        when (section) {
-            AppSection.SETTINGS -> SettingsScreen(
+        when {
+            section == AppSection.HISTORY -> HistoryScreen(modifier = Modifier.padding(padding))
+            showPrivacy -> PrivacyScreen(ui = privacy, onBack = { showPrivacy = false }, modifier = Modifier.padding(padding))
+            else -> SettingsScreen(
                 appName = appName,
                 appVersion = appVersion,
                 models = models,
@@ -95,9 +109,9 @@ fun AppScreen(
                 languages = languages,
                 currentLanguage = currentLanguage,
                 onSelectLanguage = onSelectLanguage,
+                onOpenPrivacy = { showPrivacy = true },
                 modifier = Modifier.padding(padding),
             )
-            AppSection.HISTORY -> HistoryScreen(modifier = Modifier.padding(padding))
         }
     }
 }

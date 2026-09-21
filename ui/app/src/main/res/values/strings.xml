@@ -21,6 +21,51 @@
     <string name="settings_language">Idioma</string>
     <string name="settings_language_more">Más idiomas próximamente.</string>
 
+    <string name="settings_privacy">Privacidad</string>
+    <string name="privacy_row_desc">Qué apps se leen, medidas de seguridad y excepciones</string>
+
+    <string name="privacy_title">Privacidad y seguridad</string>
+    <string name="privacy_back">Volver</string>
+    <string name="privacy_cancel">Cancelar</string>
+    <string name="privacy_intro">Tú decides qué apps puede leer LUPita y con qué cuidado. Nada se guarda en bruto y lo que sale del dispositivo es solo lo que tú elijas.</string>
+    <string name="privacy_apply_note">Los cambios se aplican a partir de la siguiente captura.</string>
+    <string name="privacy_catalog_empty">No hay listas de apps cargadas.</string>
+
+    <string name="tier_protected">Protegida</string>
+    <string name="tier_protected_desc">No se lee ni se captura nada de esta app.</string>
+    <string name="tier_sensitive">Sensible</string>
+    <string name="tier_sensitive_desc">Solo la zona elegida, con vista previa y sin guardar el texto.</string>
+    <string name="tier_normal">Normal</string>
+    <string name="tier_normal_desc">Solo la zona elegida; el resultado se guarda.</string>
+
+    <string name="privacy_unknown_title">Apps desconocidas</string>
+    <string name="privacy_unknown_hint">Las que no están en ninguna lista. Recomendado: Sensible.</string>
+
+    <string name="privacy_measures_title">Medidas de seguridad</string>
+    <string name="measure_app_control">Control por app</string>
+    <string name="measure_app_control_desc">Aplica un nivel de sensibilidad a cada app. Si lo desactivas, todo se trata como normal.</string>
+    <string name="measure_drop_password">Ignorar campos de contraseña</string>
+    <string name="measure_drop_password_desc">Nunca se incluyen los campos de contraseña que haya en pantalla.</string>
+    <string name="measure_preview">Vista previa antes de enviar</string>
+    <string name="measure_preview_desc">En apps sensibles, enseña exactamente lo que se enviará y pide confirmación.</string>
+    <string name="measure_redact">Ocultar datos personales</string>
+    <string name="measure_redact_desc">Sustituye tarjetas, IBAN, correos, teléfonos y documentos por marcas. Es una red de seguridad: no lo detecta todo.</string>
+    <string name="measure_audit">Registro de lo enviado</string>
+    <string name="measure_audit_desc">Guarda solo metadatos (hora, app, herramienta y tamaño) de lo que sale del dispositivo.</string>
+    <string name="measure_propose">Proponer por nombre</string>
+    <string name="measure_propose_desc">Sugiere proteger apps desconocidas cuyo nombre parece bancario o de contraseñas.</string>
+
+    <string name="privacy_regions_title">Regiones</string>
+    <string name="privacy_regions_hint">Activa las listas de apps de cada región.</string>
+    <string name="privacy_groups_title">Grupos de apps</string>
+    <string name="privacy_groups_hint">Cambia el nivel de todo un grupo a la vez.</string>
+    <string name="privacy_rules_title">Excepciones tuyas</string>
+    <string name="privacy_rules_empty">Aún no has añadido ninguna. Una excepción gana siempre a las listas.</string>
+    <string name="privacy_rules_add">Añadir app</string>
+    <string name="privacy_rules_remove">Quitar</string>
+    <string name="privacy_pick_app">Elige una app</string>
+    <string name="privacy_pick_empty">No se encontraron apps.</string>
+
     <string name="history_title">Historial</string>
     <string name="history_empty_title">Aún no hay análisis</string>
     <string name="history_empty_body">Los análisis que hagas aparecerán aquí, con su fecha, la zona capturada y las herramientas usadas.</string>

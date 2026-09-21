@@ -22,9 +22,13 @@ import androidx.compose.ui.Modifier
 import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.ModelCatalog
 import com.antoniopg.lupita.core.model.PermissionState
+import com.antoniopg.lupita.core.model.PrivacyRegions
+import com.antoniopg.lupita.core.model.PrivacySettings
 import com.antoniopg.lupita.core.model.RequiredPermission
 import com.antoniopg.lupita.overlay.OverlayService
 import com.antoniopg.lupita.ui.app.AppScreen
+import com.antoniopg.lupita.ui.app.privacy.PrivacyActions
+import com.antoniopg.lupita.ui.app.privacy.PrivacyUi
 import com.antoniopg.lupita.ui.app.onboarding.OnboardingScreen
 import com.antoniopg.lupita.ui.theme.LupitaTheme
 import kotlinx.coroutines.flow.map
@@ -76,6 +80,27 @@ class MainActivity : ComponentActivity() {
                         // mostrar un instante el primero y saltar despues al elegido).
                         val stored by remember { container.settings.modelId.map(::StoredModel) }
                             .collectAsState(initial = null)
+                        val language = container.language.current()
+                        val privacySettings by container.privacySettings.settings.collectAsState(
+                            initial = PrivacySettings(enabledRegions = PrivacyRegions.defaultFor(container.language.systemCountry())),
+                        )
+                        val privacy = remember(scope, container, language, privacySettings) {
+                            val repo = container.privacySettings
+                            PrivacyUi(
+                                settings = privacySettings,
+                                catalog = container.privacyCatalog,
+                                language = language,
+                                actions = PrivacyActions(
+                                    onMeasure = { m, on -> scope.launch { repo.setMeasure(m, on) } },
+                                    onUnknownTier = { scope.launch { repo.setUnknownAppTier(it) } },
+                                    onGroupTier = { g, t -> scope.launch { repo.setGroupTier(g, t) } },
+                                    onRegion = { r, on -> scope.launch { repo.setRegionEnabled(r, on) } },
+                                    onPutRule = { scope.launch { repo.putUserRule(it) } },
+                                    onRemoveRule = { scope.launch { repo.removeUserRule(it) } },
+                                    loadInstalledApps = { loadInstalledApps(applicationContext) },
+                                ),
+                            )
+                        }
                         AppScreen(
                             requestedSection = section,
                             onRequestConsumed = { section = null },
@@ -85,8 +110,9 @@ class MainActivity : ComponentActivity() {
                             selectedModelId = stored?.let { ModelCatalog.effectiveSelection(catalog, it.id) },
                             onSelectModel = { id -> scope.launch { container.settings.setModelId(id) } },
                             languages = container.language.supported,
-                            currentLanguage = container.language.current(),
+                            currentLanguage = language,
                             onSelectLanguage = container.language::set,
+                            privacy = privacy,
                         )
                     } else {
                         OnboardingScreen(missing = missing, onRequest = ::request)
