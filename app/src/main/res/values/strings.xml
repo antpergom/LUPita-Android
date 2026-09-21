@@ -3,7 +3,7 @@
     <string name="app_name">LUPita</string>
 
     <string name="notification_channel_name">Burbuja activa</string>
-    <string name="notification_title">LUPita está activa</string>
-    <string name="notification_text">La burbuja flota sobre las demás apps.</string>
+    <string name="notification_title">LUPita activa</string>
+    <string name="notification_text">Toca la burbuja para analizar</string>
     <string name="notification_action_stop">Apagar</string>
 </resources>

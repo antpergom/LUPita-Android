@@ -9,9 +9,13 @@ enum class OverlayPhase { IDLE, MENU, CAPTURING }
  */
 object OverlayTransitions {
 
-    /** Tap normal. En gris (sin herramientas) no hace nada; con el menu abierto, lo cierra. */
+    /**
+     * Tap normal. Con herramientas activas captura. En gris NO captura (no se puede ejecutar), pero
+     * abre el menu, como en el mock: asi el usuario descubre como activar una herramienta. Con el
+     * menu abierto, lo cierra.
+     */
     fun onTap(phase: OverlayPhase, settings: BubbleSettings): OverlayPhase = when (phase) {
-        OverlayPhase.IDLE -> if (settings.canCapture) OverlayPhase.CAPTURING else OverlayPhase.IDLE
+        OverlayPhase.IDLE -> if (settings.canCapture) OverlayPhase.CAPTURING else OverlayPhase.MENU
         OverlayPhase.MENU -> OverlayPhase.IDLE
         OverlayPhase.CAPTURING -> OverlayPhase.CAPTURING
     }

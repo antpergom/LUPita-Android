@@ -1,11 +1,10 @@
 plugins {
     alias(libs.plugins.android.library)
-    // AGP 9 trae Kotlin integrado: no se aplica kotlin-android. El compilador de Compose si.
     alias(libs.plugins.kotlin.compose)
 }
 
 android {
-    namespace = "com.antoniopg.lupita.ui.overlay"
+    namespace = "com.antoniopg.lupita.ui.theme"
     compileSdk = 37
 
     defaultConfig {
@@ -26,17 +25,12 @@ android {
     }
 }
 
+// Sistema de diseno compartido (paleta y tema del mock). Es la UNICA excepcion a "un modulo UI no
+// depende de otro modulo UI" (ver :tools:boundaries) y no depende de nada del proyecto.
 dependencies {
-    implementation(project(":core:model"))
-    implementation(project(":ui:theme"))
-
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
-    implementation(libs.compose.material.icons.extended)
-    implementation(libs.lifecycle.runtime.ktx)
-    // ViewModelStore/Owner: la ComposeView fuera de una Activity necesita aportar los tres owners.
-    implementation(libs.lifecycle.viewmodel.compose)
 
     testImplementation(libs.junit)
 }

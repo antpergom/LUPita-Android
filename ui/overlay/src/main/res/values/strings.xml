@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Provisional (paso 3b): se retira cuando exista la captura real (paso 4). -->
+    <string name="bubble_description">LUPita</string>
+
+    <string name="menu_title">Herramientas</string>
+    <plurals name="menu_active_count">
+        <item quantity="one">%1$d activa</item>
+        <item quantity="other">%1$d activas</item>
+    </plurals>
+    <string name="tool_general">Análisis general</string>
+    <string name="tool_verify">Verificación de hechos</string>
+    <string name="tool_ai_detect">Detección de IA</string>
+    <string name="tool_entity">Investigación de entidades</string>
+    <string name="menu_depth_title">PROFUNDIDAD DE INVESTIGACIÓN</string>
+    <string name="depth_low">Baja</string>
+    <string name="depth_medium">Media</string>
+    <string name="depth_high">Alta</string>
+    <string name="menu_settings">Ajustes</string>
+    <string name="menu_history">Historial</string>
+
+    <!-- Provisional (paso 3): se retira cuando exista la captura real (paso 4). -->
     <string name="overlay_capture_pending">Captura: llega en el paso 4</string>
 </resources>

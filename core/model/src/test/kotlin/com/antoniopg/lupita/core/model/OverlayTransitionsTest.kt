@@ -19,8 +19,11 @@ class OverlayTransitionsTest {
     }
 
     @Test
-    fun `a gray bubble ignores a tap`() {
-        assertEquals(OverlayPhase.IDLE, OverlayTransitions.onTap(OverlayPhase.IDLE, gray))
+    fun `a gray bubble never captures on tap - it opens the menu instead, as in the mock`() {
+        val next = OverlayTransitions.onTap(OverlayPhase.IDLE, gray)
+
+        assertEquals(OverlayPhase.MENU, next)
+        assertFalse(next == OverlayPhase.CAPTURING)
     }
 
     @Test

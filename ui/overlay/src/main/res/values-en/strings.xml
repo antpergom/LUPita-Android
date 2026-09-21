@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Provisional (step 3b): removed once real capture exists (step 4). -->
+    <string name="bubble_description">LUPita</string>
+
+    <string name="menu_title">Tools</string>
+    <plurals name="menu_active_count">
+        <item quantity="one">%1$d active</item>
+        <item quantity="other">%1$d active</item>
+    </plurals>
+    <string name="tool_general">General analysis</string>
+    <string name="tool_verify">Fact checking</string>
+    <string name="tool_ai_detect">AI detection</string>
+    <string name="tool_entity">Entity research</string>
+    <string name="menu_depth_title">RESEARCH DEPTH</string>
+    <string name="depth_low">Low</string>
+    <string name="depth_medium">Medium</string>
+    <string name="depth_high">High</string>
+    <string name="menu_settings">Settings</string>
+    <string name="menu_history">History</string>
+
+    <!-- Provisional (step 3): removed once real capture exists (step 4). -->
     <string name="overlay_capture_pending">Capture: coming in step 4</string>
 </resources>

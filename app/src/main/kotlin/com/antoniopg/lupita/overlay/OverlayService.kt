@@ -15,6 +15,7 @@ import android.provider.Settings
 import com.antoniopg.lupita.LupitaApp
 import com.antoniopg.lupita.MainActivity
 import com.antoniopg.lupita.R
+import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.ui.overlay.BubbleOverlay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,7 +53,23 @@ class OverlayService : Service() {
         // Sin el permiso, addView lanza BadTokenException; la Activity ya lo exige antes de arrancar.
         if (!Settings.canDrawOverlays(this)) return
         val settings = (application as LupitaApp).container.settings
-        bubble = BubbleOverlay(this, settings, scope).also { it.show() }
+        bubble = BubbleOverlay(this, settings, scope, onOpenApp = ::openApp).also { it.show() }
+    }
+
+    /**
+     * Abre la app en la seccion pedida desde el menu. Permitido aunque el servicio este en segundo
+     * plano porque la app tiene una ventana de superposicion visible.
+     */
+    private fun openApp(section: AppSection) {
+        startActivity(
+            Intent(this, MainActivity::class.java)
+                .putExtra(MainActivity.EXTRA_SECTION, section.key)
+                .addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP,
+                ),
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

@@ -25,6 +25,12 @@ private val PURE_KINDS = setOf(Kind.CORE, Kind.CAPABILITY, Kind.SOURCE)
 /** Excepciones declaradas: modulos cuyo trabajo ES tocar Android (accesibilidad y captura). */
 private val ANDROID_ALLOWED = setOf(":capability:screen")
 
+/**
+ * Sistema de diseno compartido: el UNICO modulo UI del que otros modulos UI pueden depender. Sin esta
+ * excepcion cada modulo UI tendria que duplicar la paleta.
+ */
+private const val SHARED_THEME = ":ui:theme"
+
 /** El modelo base no depende de ningun otro modulo. */
 private val NO_DEPS = setOf(":core:model")
 
@@ -77,7 +83,7 @@ fun check(root: File): List<Violation> {
             val depKind = kindOf(dep)
             when {
                 depKind == null -> violations += Violation(module, "depende de $dep, que no esta clasificado")
-                depKind !in ALLOWED_DEPS.getValue(kind) ->
+                depKind !in ALLOWED_DEPS.getValue(kind) && !(kind == Kind.UI && dep == SHARED_THEME) ->
                     violations += Violation(module, "un modulo $kind no puede depender de $dep ($depKind)")
             }
         }

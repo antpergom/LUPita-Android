@@ -10,25 +10,26 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.PermissionState
 import com.antoniopg.lupita.core.model.RequiredPermission
 import com.antoniopg.lupita.overlay.OverlayService
 import com.antoniopg.lupita.ui.app.onboarding.OnboardingScreen
 import com.antoniopg.lupita.ui.app.onboarding.ServiceActiveScreen
+import com.antoniopg.lupita.ui.theme.LupitaTheme
 
 class MainActivity : ComponentActivity() {
 
     private var permissions by mutableStateOf(PermissionState(overlay = false, notifications = false))
+
+    /** Seccion pedida desde el menu de la burbuja (paso 5 la muestra de verdad). */
+    private var section by mutableStateOf<AppSection?>(null)
 
     private val requestNotifications =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -46,22 +47,28 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        section = AppSection.fromKey(intent?.getStringExtra(EXTRA_SECTION))
         setContent {
-            // Paleta segun el sistema. Sin esto, MaterialTheme por defecto es CLARO y con el movil en
-            // modo oscuro el texto salia oscuro sobre fondo oscuro (visto en el dispositivo). La
-            // Surface fija fondo y color de texto coherentes. Provisional: el tema real llega con el mock.
-            val colors = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()
-            MaterialTheme(colorScheme = colors) {
+            // Tema del mock (claro/oscuro segun el sistema). La Surface fija fondo y color de texto
+            // coherentes: sin ella el texto salia oscuro sobre fondo oscuro (visto en el dispositivo).
+            LupitaTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val missing = permissions.missing()
                     if (missing.isEmpty()) {
-                        ServiceActiveScreen()
+                        ServiceActiveScreen(requestedSection = section)
                     } else {
                         OnboardingScreen(missing = missing, onRequest = ::request)
                     }
                 }
             }
         }
+    }
+
+    // Con la app ya abierta, el menu de la burbuja reutiliza esta Activity (CLEAR_TOP + SINGLE_TOP).
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        section = AppSection.fromKey(intent.getStringExtra(EXTRA_SECTION))
     }
 
     override fun onResume() {
@@ -90,5 +97,9 @@ class MainActivity : ComponentActivity() {
             )
             RequiredPermission.NOTIFICATIONS -> requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+
+    companion object {
+        const val EXTRA_SECTION = "com.antoniopg.lupita.extra.SECTION"
     }
 }

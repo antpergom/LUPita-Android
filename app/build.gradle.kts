@@ -49,6 +49,7 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":ui:overlay"))
     implementation(project(":ui:app"))
+    implementation(project(":ui:theme"))
 
     implementation(libs.core.ktx)
     implementation(platform(libs.compose.bom))

@@ -95,6 +95,22 @@ class BoundariesTest {
     }
 
     @Test
+    fun `a ui module may depend on the shared theme module`() {
+        settings(":ui:overlay", ":ui:theme")
+        gradle(":ui:overlay", """implementation(project(":ui:theme"))""")
+
+        assertEquals(emptyList<String>(), messages())
+    }
+
+    @Test
+    fun `the theme module cannot depend on another ui module`() {
+        settings(":ui:theme", ":ui:overlay")
+        gradle(":ui:theme", """implementation(project(":ui:overlay"))""")
+
+        assertEquals(1, messages().size)
+    }
+
+    @Test
     fun `core model depends on nothing`() {
         settings(":core:model", ":core:capability")
         gradle(":core:model", """implementation(project(":core:capability"))""")

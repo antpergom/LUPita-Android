@@ -12,6 +12,6 @@ data class BubbleSettings(
     /** `null` = aun no movida por el usuario: la burbuja usa su posicion inicial. */
     val position: BubblePosition? = null,
 ) {
-    /** Gris = ninguna herramienta activa: el tap no hace nada. Es el unico estado que bloquea. */
+    /** Gris = ninguna herramienta activa: el tap no captura (abre el menu). Es el unico estado que bloquea. */
     val canCapture: Boolean get() = enabledTools.isNotEmpty()
 }

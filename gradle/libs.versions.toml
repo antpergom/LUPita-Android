@@ -21,7 +21,8 @@ lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 compose-ui = { group = "androidx.compose.ui", name = "ui" }
 compose-material3 = { group = "androidx.compose.material3", name = "material3" }
-compose-activity = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+compose-activity ={ group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
 
