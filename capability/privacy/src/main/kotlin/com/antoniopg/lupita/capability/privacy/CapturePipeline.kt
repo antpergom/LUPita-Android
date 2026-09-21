@@ -52,6 +52,9 @@ class CapturePipeline(private val source: ScreenSource, private val gate: Privac
             is CaptureResult.Captured ->
                 if (result.capture.packageName != app.packageName) {
                     Outcome.Failed(CaptureFailure.APP_CHANGED)
+                } else if (result.capture.pixels?.isUniformBlack() == true) {
+                    // Una ventana protegida no da error: se ve negra. Se descarta TODO lo leido, arbol incluido.
+                    Outcome.Ready(headerOnly(app, PrivacyDecision(PrivacyTier.PROTECTED, DecisionSource.SECURE_WINDOW)))
                 } else {
                     Outcome.Ready(assemble(app, decision, result.capture, region, settings))
                 }

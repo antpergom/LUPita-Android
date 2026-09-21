@@ -44,6 +44,12 @@ class CaptureModelTest {
     }
 
     @Test
+    fun `black detection ignores alpha and needs every pixel to be black`() {
+        assertTrue(PixelBuffer(2, 1, intArrayOf(0xFF000000.toInt(), 0x00000000)).isUniformBlack())
+        assertFalse(PixelBuffer(2, 1, intArrayOf(0xFF000000.toInt(), 0xFF000001.toInt())).isUniformBlack())
+    }
+
+    @Test
     fun `the default save policy is always`() {
         assertEquals(ImageSavePolicy.ALWAYS, ImageSavePolicy.DEFAULT)
     }

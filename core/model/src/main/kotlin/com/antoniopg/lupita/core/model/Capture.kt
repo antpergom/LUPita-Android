@@ -33,6 +33,14 @@ class PixelBuffer(val width: Int, val height: Int, val argb: IntArray) {
         require(width > 0 && height > 0) { "imagen vacia: ${width}x$height" }
         require(argb.size == width * height) { "se esperaban ${width * height} pixeles y hay ${argb.size}" }
     }
+
+    /**
+     * Todos los pixeles son negro puro (ignora la transparencia). Android sustituye por negro el contenido de
+     * las ventanas `FLAG_SECURE` en una captura, SIN dar error (visto en el Pixel con Android 17: una pestana
+     * de incognito de Chrome devolvio una captura correcta pero negra). Es la senal para tratar la region como
+     * protegida; el precio es un falso positivo con una region de negro puro real (p. ej. tema «AMOLED»).
+     */
+    fun isUniformBlack(): Boolean = argb.all { it and 0x00FFFFFF == 0 }
 }
 
 /** La app que esta en primer plano, y lo que el sistema sabe de su ventana, ANTES de leer nada. */

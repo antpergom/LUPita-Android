@@ -51,7 +51,7 @@ class CapturePipelineTest {
     ) = UiNode(bounds, text = text, isPassword = password, isEditable = editable, contentWithheld = withheld, children = children)
 
     private fun captured(pkg: String, vararg nodes: UiNode) = CaptureResult.Captured(
-        RawCapture(pkg, region, nodes.toList(), PixelBuffer(1, 1, intArrayOf(0)), 0L),
+        RawCapture(pkg, region, nodes.toList(), PixelBuffer(1, 1, intArrayOf(0xFF808080.toInt())), 0L), // gris: el negro puro cuenta como ventana protegida
     )
 
     private fun source(pkg: String, signals: AppSignals = AppSignals(), result: CaptureResult) =
@@ -95,6 +95,33 @@ class CapturePipelineTest {
         assertEquals(PrivacyTier.PROTECTED, bundle.header.tier)
         assertEquals(DecisionSource.SECURE_WINDOW, bundle.header.decisionSource)
         assertNull(bundle.content)
+    }
+
+    @Test
+    fun `an entirely black region is treated as a secure window and nothing is kept`() {
+        val black = CaptureResult.Captured(
+            RawCapture("com.social.app", region, listOf(node("secreto")), PixelBuffer(2, 2, IntArray(4) { 0xFF000000.toInt() }), 0L),
+        )
+
+        val bundle = ready(run(source("com.social.app", result = black)))
+
+        assertEquals(PrivacyTier.PROTECTED, bundle.header.tier)
+        assertEquals(DecisionSource.SECURE_WINDOW, bundle.header.decisionSource)
+        assertFalse(bundle.header.contentRead)
+        assertNull(bundle.content)
+    }
+
+    @Test
+    fun `a region with a single non black pixel is real content`() {
+        val px = IntArray(4) { 0xFF000000.toInt() }.also { it[3] = 0xFF010000.toInt() }
+        val almost = CaptureResult.Captured(
+            RawCapture("com.social.app", region, listOf(node("hola")), PixelBuffer(2, 2, px), 0L),
+        )
+
+        val bundle = ready(run(source("com.social.app", result = almost)))
+
+        assertTrue(bundle.header.contentRead)
+        assertNotNull(bundle.content)
     }
 
     @Test
