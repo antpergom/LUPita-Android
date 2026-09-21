@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.PersonSearch
+import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.Icon
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.Layout
@@ -82,6 +84,7 @@ internal fun MenuOverlay(
     onSelectDepth: (Depth) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenHistory: () -> Unit,
+    onQuit: () -> Unit,
 ) {
     LupitaTheme {
         // El panel crece desde la esquina que toca la burbuja.
@@ -107,6 +110,7 @@ internal fun MenuOverlay(
                         onSelectDepth = onSelectDepth,
                         onOpenSettings = onOpenSettings,
                         onOpenHistory = onOpenHistory,
+                        onQuit = onQuit,
                         modifier = Modifier.graphicsLayer {
                             val p = progress.value
                             alpha = p
@@ -145,6 +149,7 @@ private fun MenuPanel(
     onSelectDepth: (Depth) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenHistory: () -> Unit,
+    onQuit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Lupita.colors
@@ -199,6 +204,8 @@ private fun MenuPanel(
         ) {
             RoundIconButton(Icons.Rounded.Settings, stringResource(R.string.menu_settings), onOpenSettings)
             RoundIconButton(Icons.Rounded.History, stringResource(R.string.menu_history), onOpenHistory)
+            // Esquina inferior derecha: cierra la burbuja y la app (pedido del usuario).
+            RoundIconButton(Icons.Rounded.PowerSettingsNew, stringResource(R.string.menu_quit), onQuit, tint = c.accent)
         }
     }
 }
@@ -307,7 +314,12 @@ private fun DepthSelector(selected: Depth, onSelect: (Depth) -> Unit) {
 private val SEGMENT_HEIGHT = 32.dp
 
 @Composable
-private fun RoundIconButton(icon: ImageVector, description: String, onClick: () -> Unit) {
+private fun RoundIconButton(
+    icon: ImageVector,
+    description: String,
+    onClick: () -> Unit,
+    tint: Color = Lupita.colors.ink,
+) {
     val c = Lupita.colors
     Box(
         modifier = Modifier
@@ -317,6 +329,6 @@ private fun RoundIconButton(icon: ImageVector, description: String, onClick: () 
             .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(imageVector = icon, contentDescription = description, tint = c.ink, modifier = Modifier.size(17.dp))
+        Icon(imageVector = icon, contentDescription = description, tint = tint, modifier = Modifier.size(17.dp))
     }
 }

@@ -44,7 +44,15 @@ class PixelBuffer(val width: Int, val height: Int, val argb: IntArray) {
 }
 
 /** La app que esta en primer plano, y lo que el sistema sabe de su ventana, ANTES de leer nada. */
-data class ForegroundApp(val packageName: String, val appLabel: String?, val signals: AppSignals = AppSignals())
+data class ForegroundApp(val packageName: String, val appLabel: String?, val signals: AppSignals = AppSignals()) {
+    companion object {
+        /**
+         * Paquete que usan las fuentes que no saben que app hay delante (captura por proyeccion, sin
+         * accesibilidad). No esta en ninguna lista: cae en «app desconocida», o sea *Sensible* por defecto.
+         */
+        const val UNKNOWN_PACKAGE = "unknown"
+    }
+}
 
 /** Se pide siempre una region: la fuente solo devuelve lo que cae dentro (arbol filtrado y pixeles recortados). */
 data class CaptureRequest(val region: SelectionRect)

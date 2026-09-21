@@ -19,6 +19,8 @@ object ImagePipeline {
 /** Lo que paso al recortar y reducir (antes de codificar). Lo rellena la fuente de pantalla. */
 @Serializable
 data class ImageProvenance(
+    /** De donde salio la captura: `accessibility` o `projection`. */
+    val source: String,
     /** Tamano de la region en pixeles de pantalla, antes de reducir. */
     val regionWidth: Int,
     val regionHeight: Int,

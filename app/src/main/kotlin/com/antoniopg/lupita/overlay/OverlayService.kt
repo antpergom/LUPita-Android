@@ -1,5 +1,6 @@
 package com.antoniopg.lupita.overlay
 
+import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -20,10 +21,14 @@ import com.antoniopg.lupita.MainActivity
 import com.antoniopg.lupita.R
 import com.antoniopg.lupita.capability.privacy.CapturePipeline
 import com.antoniopg.lupita.capability.screen.AccessibilityScreenSource
+import com.antoniopg.lupita.capability.screen.ProjectionScreenSource
+import com.antoniopg.lupita.capability.screen.ProjectionSession
 import com.antoniopg.lupita.capability.screen.RegionImage
+import com.antoniopg.lupita.capture.ProjectionConsentActivity
 import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.ContextBundle
 import com.antoniopg.lupita.core.model.EncodedImage
+import com.antoniopg.lupita.core.model.ScreenSource
 import com.antoniopg.lupita.core.model.SelectionRect
 import com.antoniopg.lupita.ui.overlay.BubbleOverlay
 import java.io.File
@@ -51,10 +56,12 @@ class OverlayService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var bubble: BubbleOverlay? = null
+    private var pendingRect: SelectionRect? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        ProjectionSession.onReady = null
         bubble?.remove()
         bubble = null
         scope.cancel()
@@ -67,7 +74,7 @@ class OverlayService : Service() {
         // Sin el permiso, addView lanza BadTokenException; la Activity ya lo exige antes de arrancar.
         if (!Settings.canDrawOverlays(this)) return
         val settings = (application as LupitaApp).container.settings
-        bubble = BubbleOverlay(this, settings, scope, onOpenApp = ::openApp, onCapture = ::onCapture)
+        bubble = BubbleOverlay(this, settings, scope, onOpenApp = ::openApp, onCapture = ::onCapture, onQuit = ::quit)
             .also { it.show() }
     }
 
@@ -79,16 +86,50 @@ class OverlayService : Service() {
         scope.launch {
             // La capa de captura se acaba de quitar: esperar unos fotogramas para que no salga en la imagen.
             delay(CAPTURE_SETTLE_MS)
-            val container = (application as LupitaApp).container
-            val settings = container.privacySettings.settings.first()
-            val started = SystemClock.elapsedRealtime()
-            val outcome = withContext(Dispatchers.Default) {
-                CapturePipeline(AccessibilityScreenSource(this@OverlayService), container.privacyGate)
-                    .run(rect, settings)
+            val accessibility = AccessibilityScreenSource(this@OverlayService)
+            when {
+                accessibility.isAvailable -> runCapture(accessibility, rect)
+                // Respaldo sin accesibilidad: solo pixeles, y hace falta el permiso de proyeccion (por sesion).
+                ProjectionSession.isActive -> runCapture(ProjectionScreenSource(), rect)
+                else -> requestProjection(rect)
             }
-            val ms = SystemClock.elapsedRealtime() - started
-            toast(summarize(outcome, ms))
         }
+    }
+
+    /** Pide el permiso de proyeccion; al concederse, se captura la misma region (guardada mientras tanto). */
+    private fun requestProjection(rect: SelectionRect) {
+        pendingRect = rect
+        ProjectionSession.onReady = {
+            val region = pendingRect
+            pendingRect = null
+            ProjectionSession.onReady = null
+            // El dialogo del sistema acaba de cerrarse: esperar a que deje de estar en pantalla.
+            if (region != null) {
+                scope.launch {
+                    delay(PROJECTION_SETTLE_MS)
+                    runCapture(ProjectionScreenSource(), region)
+                }
+            }
+        }
+        startActivity(Intent(this, ProjectionConsentActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    private suspend fun runCapture(source: ScreenSource, rect: SelectionRect) {
+        val container = (application as LupitaApp).container
+        val settings = container.privacySettings.settings.first()
+        val started = SystemClock.elapsedRealtime()
+        val outcome = withContext(Dispatchers.Default) {
+            CapturePipeline(source, container.privacyGate).run(rect, settings)
+        }
+        toast(summarize(outcome, SystemClock.elapsedRealtime() - started))
+    }
+
+    /** Quita la burbuja y cierra la app: la X de abajo y el boton del panel. */
+    private fun quit() {
+        ProjectionSession.stop()
+        getSystemService(ActivityManager::class.java).appTasks.forEach { it.finishAndRemoveTask() }
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     private suspend fun summarize(outcome: CapturePipeline.Outcome, ms: Long): String = when (outcome) {
@@ -212,6 +253,7 @@ class OverlayService : Service() {
     companion object {
         /** Tiempo para que desaparezca la capa de captura antes de pedir la imagen (a medir en el movil). */
         private const val CAPTURE_SETTLE_MS = 150L
+        private const val PROJECTION_SETTLE_MS = 600L
         const val ACTION_STOP = "com.antoniopg.lupita.action.STOP_OVERLAY"
         private const val CHANNEL_ID = "overlay_service"
         private const val NOTIFICATION_ID = 1

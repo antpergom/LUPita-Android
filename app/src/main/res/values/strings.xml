@@ -12,4 +12,9 @@
     <string name="capture_read">Leído (%1$s): %2$d nodos · imagen %3$d×%4$d · %5$d KB · %6$d ms</string>
     <string name="capture_failed">No se pudo capturar: %1$s (%2$s)</string>
     <string name="capture_protected">App protegida (%1$s): no se ha leído nada</string>
+    <string name="projection_channel_name">Captura de pantalla</string>
+    <string name="projection_notification_title">Captura de pantalla</string>
+    <string name="projection_notification_text">LUPita está leyendo la zona que eliges. Páralo cuando termines.</string>
+    <string name="projection_stop">Parar</string>
+    <string name="projection_denied">Sin permiso de captura: no se ha leído nada</string>
 </resources>

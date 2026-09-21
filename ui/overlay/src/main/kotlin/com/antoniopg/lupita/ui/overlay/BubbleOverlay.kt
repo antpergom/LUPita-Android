@@ -53,6 +53,8 @@ class BubbleOverlay(
     private val scope: CoroutineScope,
     private val onOpenApp: (AppSection) -> Unit,
     private val onCapture: (SelectionRect) -> Unit,
+    /** Quitar la burbuja (arrastrandola a la X o con el boton del panel): lo resuelve quien la creo. */
+    private val onQuit: () -> Unit,
 ) {
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val owner = OverlayLifecycleOwner()
@@ -68,6 +70,8 @@ class BubbleOverlay(
     private var bubbleWindow: ComposeOverlayWindow? = null
     private var menuWindow: ComposeOverlayWindow? = null
     private var captureWindow: ComposeOverlayWindow? = null
+    private var dismissWindow: ComposeOverlayWindow? = null
+    private var dismissActive by mutableStateOf(false)
     private var collectJob: Job? = null
     private var started = false
     private var startX = 0
@@ -93,6 +97,7 @@ class BubbleOverlay(
         collectJob?.cancel()
         collectJob = null
         handler.removeCallbacks(longPressTimer)
+        hideDismissTarget()
         captureWindow?.remove()
         captureWindow = null
         menuWindow?.remove()
@@ -176,6 +181,7 @@ class BubbleOverlay(
             }
             MotionEvent.ACTION_CANCEL -> {
                 handler.removeCallbacks(longPressTimer)
+                hideDismissTarget()
                 gesture.onCancel()
             }
         }
@@ -187,8 +193,14 @@ class BubbleOverlay(
             is GestureEvent.Drag -> {
                 handler.removeCallbacks(longPressTimer)
                 moveTo(startX + event.dx.toInt(), startY + event.dy.toInt())
+                showDismissTarget()
+                dismissActive = bubbleOverDismissTarget()
             }
-            GestureEvent.DragEnd -> snapToEdgeAndRemember()
+            GestureEvent.DragEnd -> {
+                val quit = bubbleOverDismissTarget()
+                hideDismissTarget()
+                if (quit) onQuit() else snapToEdgeAndRemember()
+            }
             GestureEvent.Tap -> setPhase(OverlayTransitions.onTap(phase, current))
             GestureEvent.LongPress -> setPhase(OverlayTransitions.onLongPress(phase))
         }
@@ -229,6 +241,7 @@ class BubbleOverlay(
                     onSelectDepth = ::selectDepth,
                     onOpenSettings = { openApp(AppSection.SETTINGS) },
                     onOpenHistory = { openApp(AppSection.HISTORY) },
+                    onQuit = onQuit,
                 )
             },
         ).also { it.add() }
@@ -299,6 +312,49 @@ class BubbleOverlay(
         window.params.x = x.coerceIn(0, (bounds.width() - w).coerceAtLeast(0))
         window.params.y = y.coerceIn(0, (bounds.height() - h).coerceAtLeast(0))
         window.update()
+    }
+
+    /** El centro de la burbuja esta sobre la X de abajo (mientras se arrastra o al soltar). */
+    private fun bubbleOverDismissTarget(): Boolean {
+        val window = bubbleWindow ?: return false
+        val bounds = windowManager.currentWindowMetrics.bounds
+        val w = window.view.width.takeIf { it > 0 } ?: windowPx
+        val h = window.view.height.takeIf { it > 0 } ?: windowPx
+        return DismissZone.contains(
+            window.params.x + w / 2f, window.params.y + h / 2f, bounds.width(), bounds.height(), density,
+        )
+    }
+
+    /** La X aparece al empezar a arrastrar y solo se dibuja: no recibe toques. */
+    private fun showDismissTarget() {
+        if (dismissWindow != null) return
+        val bounds = windowManager.currentWindowMetrics.bounds
+        val sizePx = ((DismissZone.TARGET_SIZE_DP + 2 * DISMISS_MARGIN_DP) * density).roundToInt()
+        val params = WindowManager.LayoutParams(
+            sizePx, sizePx, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = (DismissZone.centerX(bounds.width()) - sizePx / 2f).roundToInt()
+            y = (DismissZone.centerY(bounds.height(), density) - sizePx / 2f).roundToInt()
+        }
+        dismissWindow = ComposeOverlayWindow(
+            context = context,
+            windowManager = windowManager,
+            owner = owner,
+            params = params,
+            content = { DismissTargetContent(active = dismissActive) },
+        ).also { it.add() }
+    }
+
+    private fun hideDismissTarget() {
+        dismissActive = false
+        dismissWindow?.remove()
+        dismissWindow = null
     }
 
     /** Al soltar, se pega al borde horizontal mas cercano y se recuerda la posicion. */

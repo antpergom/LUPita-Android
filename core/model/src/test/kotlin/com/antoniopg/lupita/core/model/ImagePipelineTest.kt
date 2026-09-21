@@ -7,6 +7,7 @@ import org.junit.Test
 class ImagePipelineTest {
 
     private val provenance = ImageProvenance(
+        source = "accessibility",
         regionWidth = 1440, regionHeight = 3120, outputWidth = 880, outputHeight = 1906,
         sourceColorSpace = "Display P3", resampling = "canvas-bilinear", maxAreaPx = ImageSizing.MAX_AREA_PX,
     )

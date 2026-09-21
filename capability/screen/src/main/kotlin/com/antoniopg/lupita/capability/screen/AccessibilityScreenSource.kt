@@ -39,7 +39,7 @@ class AccessibilityScreenSource(private val context: Context) : ScreenSource {
             is Shot.Success -> shot.bitmap
         }
         val cropped = try {
-            RegionImage.crop(bitmap, request.region)
+            RegionImage.crop(bitmap, request.region, "accessibility")
         } finally {
             bitmap.recycle()
         }

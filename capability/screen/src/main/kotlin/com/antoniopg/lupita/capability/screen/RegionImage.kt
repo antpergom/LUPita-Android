@@ -29,7 +29,7 @@ object RegionImage {
     private const val ENCODER = "android-bitmap-compress"
 
     /** [full] puede ser de hardware; se copia a software antes de tocarla. El llamador la libera. */
-    internal fun crop(full: Bitmap, region: SelectionRect): Cropped {
+    internal fun crop(full: Bitmap, region: SelectionRect, source: String): Cropped {
         val left = region.left.coerceIn(0, full.width - 1)
         val top = region.top.coerceIn(0, full.height - 1)
         val src = Rect(left, top, region.right.coerceIn(left + 1, full.width), region.bottom.coerceIn(top + 1, full.height))
@@ -48,6 +48,7 @@ object RegionImage {
         return Cropped(
             PixelBuffer(size.width, size.height, pixels),
             ImageProvenance(
+                source = source,
                 regionWidth = src.width(),
                 regionHeight = src.height(),
                 outputWidth = size.width,

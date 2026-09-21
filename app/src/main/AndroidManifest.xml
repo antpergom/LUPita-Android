@@ -17,6 +17,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Respaldo de captura sin accesibilidad (MediaProjection): servicio en primer plano de ese tipo. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
 
     <!-- allowBackup=false a proposito: la configuracion y, mas adelante, las credenciales dependen de
          una clave del Android Keystore que NO viaja en una copia de seguridad. Restaurar datos sin su
@@ -48,6 +50,19 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Floating overlay bubble that lets the user select and analyse a region of the screen" />
         </service>
+
+        <!-- Sesion de captura por proyeccion (respaldo sin accesibilidad); la notificacion permite pararla. -->
+        <service
+            android:name=".capture.ProjectionService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
+        <!-- Transparente: solo lanza el dialogo de permiso de proyeccion del sistema. -->
+        <activity
+            android:name=".capture.ProjectionConsentActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
     </application>
 

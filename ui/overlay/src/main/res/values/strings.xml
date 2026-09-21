@@ -22,4 +22,6 @@
     <string name="capture_hint_selected">Zona seleccionada — confirma o cancela</string>
     <string name="capture_cancel">Cancelar</string>
     <string name="capture_confirm">Analizar</string>
+    <string name="menu_quit">Cerrar LUPita y la burbuja</string>
+    <string name="dismiss_target">Suelta aquí para quitar la burbuja</string>
 </resources>

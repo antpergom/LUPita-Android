@@ -22,4 +22,6 @@
     <string name="capture_hint_selected">Area selected — confirm or cancel</string>
     <string name="capture_cancel">Cancel</string>
     <string name="capture_confirm">Analyze</string>
+    <string name="menu_quit">Close LUPita and the bubble</string>
+    <string name="dismiss_target">Drop here to remove the bubble</string>
 </resources>
