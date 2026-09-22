@@ -13,6 +13,9 @@ datastorePreferences = "1.2.1"
 coroutines = "1.9.0"
 kotlinxSerialization = "1.11.0"
 junit = "4.13.2"
+# Confirmado en mvnrepository.com 2026-09-22: 16.0.1 es la ultima estable (texto latino; el modelo se
+# descarga al dispositivo la primera vez, necesita Google Play Services).
+mlkitTextRecognition = "16.0.1"
 
 [libraries]
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -34,6 +37,8 @@ kotlinx-coroutines-test ={ group = "org.jetbrains.kotlinx", name = "kotlinx-coro
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
 
 [plugins]
 # Desde AGP 9.0 el soporte de Kotlin va integrado: NO se aplica "org.jetbrains.kotlin.android".

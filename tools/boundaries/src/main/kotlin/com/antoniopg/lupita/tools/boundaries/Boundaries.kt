@@ -22,8 +22,8 @@ private val ALLOWED_DEPS: Map<Kind, Set<Kind>> = mapOf(
 /** Tipos que deben ser Kotlin puro: sin `android.` ni `androidx.`. */
 private val PURE_KINDS = setOf(Kind.CORE, Kind.CAPABILITY, Kind.SOURCE)
 
-/** Excepciones declaradas: modulos cuyo trabajo ES tocar Android (accesibilidad y captura). */
-private val ANDROID_ALLOWED = setOf(":capability:screen")
+/** Excepciones declaradas: modulos cuyo trabajo ES tocar Android (accesibilidad, captura y OCR con ML Kit). */
+private val ANDROID_ALLOWED = setOf(":capability:screen", ":capability:ocr")
 
 /**
  * Sistema de diseno compartido: el UNICO modulo UI del que otros modulos UI pueden depender. Sin esta
