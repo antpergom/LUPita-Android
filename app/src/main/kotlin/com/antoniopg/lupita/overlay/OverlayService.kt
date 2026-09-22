@@ -133,17 +133,21 @@ class OverlayService : Service() {
             CapturePipeline(source, container.privacyGate).run(rect, settings)
         }
         recordSuggestion(outcome)
-        toast(
-            summarize(
-                outcome,
-                SystemClock.elapsedRealtime() - started,
-                settleMs,
-                settings.imageSavePolicy,
-                settings.fixtureRecorderEnabled,
-                settings.isEnabled(SecurityMeasure.AUDIT_LOG),
-            ),
+        val summary = summarize(
+            outcome,
+            SystemClock.elapsedRealtime() - started,
+            settleMs,
+            settings.imageSavePolicy,
+            settings.fixtureRecorderEnabled,
+            settings.isEnabled(SecurityMeasure.AUDIT_LOG),
         )
+        // Dos toasts, no un `\n`: en el Pixel un solo texto de dos lineas se queda corto, la primera
+        // linea ya llena el hueco visible y la segunda nunca llega a verse (hallado verificando F2/F3).
+        toast(summary.message)
+        summary.normalized?.let { delay(TOAST_GAP_MS); toast(it) }
     }
+
+    private class Summary(val message: String, val normalized: String? = null)
 
     /** La propuesta por nombre (si la hay) se registra siempre: no depende de la medida de auditoria. */
     private suspend fun recordSuggestion(outcome: CapturePipeline.Outcome) {
@@ -182,16 +186,16 @@ class OverlayService : Service() {
         savePolicy: ImageSavePolicy,
         recorderEnabled: Boolean,
         auditEnabled: Boolean,
-    ): String = when (outcome) {
+    ): Summary = when (outcome) {
         is CapturePipeline.Outcome.Failed ->
-            getString(R.string.capture_failed, outcome.reason.name, outcome.detail ?: "-")
+            Summary(getString(R.string.capture_failed, outcome.reason.name, outcome.detail ?: "-"))
 
         is CapturePipeline.Outcome.Ready -> {
             val bundle = outcome.bundle
             val content = bundle.content
             if (content == null) {
                 if (auditEnabled) appendAudit(bundle.header, kilobytes = 0)
-                getString(R.string.capture_protected, bundle.header.decisionSource.name)
+                Summary(getString(R.string.capture_protected, bundle.header.decisionSource.name))
             } else {
                 val image = content.pixels
                 val encoded = image?.let {
@@ -204,19 +208,24 @@ class OverlayService : Service() {
                 // F2: normalizacion determinista (filtrado, orden de lectura, roles) + artefacto por hash del texto.
                 val normalized = ContextNormalizer.normalize(content.nodes)
                 val textArtifact = ArtifactHash.of(normalized.plainText)
-                getString(
-                    R.string.capture_read,
-                    bundle.header.tier.name,
-                    content.nodes.sumOf { n -> n.flatten().count() },
-                    image?.width ?: 0,
-                    image?.height ?: 0,
-                    kb,
-                    ms,
-                    normalized.nodes.size,
-                    getString(
-                        if (normalized.pattern == ContentPattern.SOCIAL_POST) R.string.pattern_social_post else R.string.pattern_unknown,
+                Summary(
+                    message = getString(
+                        R.string.capture_read,
+                        bundle.header.tier.name,
+                        content.nodes.sumOf { n -> n.flatten().count() },
+                        image?.width ?: 0,
+                        image?.height ?: 0,
+                        kb,
+                        ms,
                     ),
-                    textArtifact.hex.take(8),
+                    normalized = getString(
+                        R.string.capture_normalized,
+                        normalized.nodes.size,
+                        getString(
+                            if (normalized.pattern == ContentPattern.SOCIAL_POST) R.string.pattern_social_post else R.string.pattern_unknown,
+                        ),
+                        textArtifact.hex.take(8),
+                    ),
                 )
             }
         }
@@ -329,6 +338,9 @@ class OverlayService : Service() {
         /** Tiempo para que desaparezca la capa de captura antes de pedir la imagen (a medir en el movil). */
         private const val CAPTURE_SETTLE_MS = 150L
         private const val PROJECTION_SETTLE_MS = 600L
+
+        /** Separacion entre los dos toasts del resumen: que no se pisen ni se lean como uno solo. */
+        private const val TOAST_GAP_MS = 3500L
         const val ACTION_STOP = "com.antoniopg.lupita.action.STOP_OVERLAY"
         private const val CHANNEL_ID = "overlay_service"
         private const val NOTIFICATION_ID = 1

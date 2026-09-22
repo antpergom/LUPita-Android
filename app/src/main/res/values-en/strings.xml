@@ -9,7 +9,8 @@
 
     <!-- Provisional (F0): analysis arrives from F1 onwards. -->
     <string name="capture_done">Area selected: %1$d × %2$d px</string>
-    <string name="capture_read">Read (%1$s): %2$d nodes · image %3$d×%4$d · %5$d KB · %6$d ms\n%7$d normalized · %8$s · %9$s</string>
+    <string name="capture_read">Read (%1$s): %2$d nodes · image %3$d×%4$d · %5$d KB · %6$d ms</string>
+    <string name="capture_normalized">%1$d normalized · %2$s · %3$s</string>
     <string name="capture_failed">Capture failed: %1$s (%2$s)</string>
     <string name="capture_protected">Protected app (%1$s): nothing was read</string>
     <string name="ask_save_summary">%1$s · %2$d KB</string>
