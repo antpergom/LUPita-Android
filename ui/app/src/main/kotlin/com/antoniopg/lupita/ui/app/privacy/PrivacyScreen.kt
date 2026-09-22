@@ -42,7 +42,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.antoniopg.lupita.core.model.AppMatch
+import com.antoniopg.lupita.core.model.AuditEntry
+import com.antoniopg.lupita.core.model.AuditOutcome
 import com.antoniopg.lupita.core.model.ImageSavePolicy
+import com.antoniopg.lupita.core.model.PendingSuggestion
 import com.antoniopg.lupita.core.model.InstalledApp
 import com.antoniopg.lupita.core.model.PrivacyCatalog
 import com.antoniopg.lupita.core.model.PrivacySettings
@@ -72,6 +75,9 @@ class PrivacyActions(
     val onPutRule: (UserRule) -> Unit,
     val onRemoveRule: (AppMatch) -> Unit,
     val onImageSavePolicy: (ImageSavePolicy) -> Unit,
+    val onAcceptSuggestion: (PendingSuggestion) -> Unit,
+    val onDismissSuggestion: (String) -> Unit,
+    val onClearAuditLog: () -> Unit,
     val loadInstalledApps: suspend () -> List<InstalledApp>,
 )
 
@@ -251,6 +257,43 @@ fun PrivacyScreen(ui: PrivacyUi, onBack: () -> Unit, modifier: Modifier = Modifi
         ) {
             Text(stringResource(R.string.privacy_rules_add), color = c.onAccent, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
         }
+        Spacer(Modifier.height(20.dp))
+
+        // 6) Propuestas pendientes
+        if (s.pendingSuggestions.isNotEmpty()) {
+            SectionLabel(stringResource(R.string.privacy_suggestions_title))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                s.pendingSuggestions.forEach { suggestion ->
+                    SuggestionCard(
+                        suggestion = suggestion,
+                        appLabel = labels[suggestion.packageName],
+                        onAccept = { actions.onAcceptSuggestion(suggestion) },
+                        onDismiss = { actions.onDismissSuggestion(suggestion.packageName) },
+                    )
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+        }
+
+        // 7) Registro de auditoria
+        SectionLabel(stringResource(R.string.privacy_audit_title))
+        if (s.auditLog.isEmpty()) {
+            Text(stringResource(R.string.privacy_audit_empty), color = c.subtle, fontSize = 12.sp)
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                s.auditLog.forEach { entry -> AuditRow(entry, labels[entry.packageName]) }
+            }
+            Spacer(Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(c.card)
+                    .clickable(role = Role.Button, onClick = actions.onClearAuditLog)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+            ) {
+                Text(stringResource(R.string.privacy_audit_clear), color = c.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+        }
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.privacy_apply_note), color = c.subtle, fontSize = 11.sp)
     }
@@ -354,3 +397,72 @@ private fun measureDescription(measure: SecurityMeasure): Int = when (measure) {
     SecurityMeasure.AUDIT_LOG -> R.string.measure_audit_desc
     SecurityMeasure.PROPOSE_BY_NAME -> R.string.measure_propose_desc
 }
+
+/** Una propuesta por nombre pendiente: el nombre instalado si se conoce, si no el paquete. */
+@Composable
+private fun SuggestionCard(suggestion: PendingSuggestion, appLabel: String?, onAccept: () -> Unit, onDismiss: () -> Unit) {
+    val c = Lupita.colors
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(c.card)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(appLabel ?: suggestion.packageName, color = c.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            stringResource(R.string.privacy_suggestions_as, tierLabel(suggestion.tier)),
+            color = c.subtle,
+            fontSize = 11.sp,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(c.cardLight)
+                    .clickable(role = Role.Button, onClick = onDismiss)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            ) {
+                Text(stringResource(R.string.privacy_suggestions_dismiss), color = c.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(c.accent)
+                    .clickable(role = Role.Button, onClick = onAccept)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            ) {
+                Text(stringResource(R.string.privacy_suggestions_accept), color = c.onAccent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+/** Una linea del registro: solo metadatos (hora, app, nivel, resultado, tamano) — nunca contenido. */
+@Composable
+private fun AuditRow(entry: AuditEntry, appLabel: String?) {
+    val c = Lupita.colors
+    val outcome = stringResource(
+        if (entry.outcome == AuditOutcome.PROTECTED) R.string.privacy_audit_protected else R.string.privacy_audit_read,
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            "${formatAuditTime(entry.timestampMillis)} · ${appLabel ?: entry.packageName}",
+            color = c.ink,
+            fontSize = 11.sp,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            if (entry.kilobytes > 0) "$outcome · ${entry.kilobytes} KB" else outcome,
+            color = c.subtle,
+            fontSize = 11.sp,
+        )
+    }
+}
+
+private fun formatAuditTime(millis: Long): String =
+    java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault()).format(java.util.Date(millis))

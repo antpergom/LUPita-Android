@@ -44,7 +44,8 @@ class PrivacyGateTest {
         groupTiers: Map<String, PrivacyTier> = emptyMap(),
         rules: List<UserRule> = emptyList(),
         measures: Map<SecurityMeasure, Boolean> = emptyMap(),
-    ) = PrivacySettings(measures, unknown, groupTiers, regions, rules)
+        dismissedSuggestions: Set<String> = emptySet(),
+    ) = PrivacySettings(measures, unknown, groupTiers, regions, rules, dismissedSuggestions = dismissedSuggestions)
 
     private fun decide(pkg: String, s: PrivacySettings = settings(), signals: AppSignals = plain) = gate.decide(pkg, signals, s)
 
@@ -194,6 +195,13 @@ class PrivacyGateTest {
     @Test
     fun `a known app never carries a name proposal`() {
         assertNull(decide("com.revolut.revolut").suggestion)
+    }
+
+    @Test
+    fun `a dismissed package never gets a proposal again`() {
+        val dismissed = settings(dismissedSuggestions = setOf("com.mycompany.bankapp"))
+
+        assertNull(decide("com.mycompany.bankapp", dismissed).suggestion)
     }
 
     @Test

@@ -9,7 +9,9 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.antoniopg.lupita.core.model.AppMatch
+import com.antoniopg.lupita.core.model.AuditEntry
 import com.antoniopg.lupita.core.model.ImageSavePolicy
+import com.antoniopg.lupita.core.model.PendingSuggestion
 import com.antoniopg.lupita.core.model.PrivacySettings
 import com.antoniopg.lupita.core.model.PrivacySettingsRepository
 import com.antoniopg.lupita.core.model.PrivacyTier
@@ -44,6 +46,11 @@ class DataStorePrivacySettingsRepository(
                 userRules = prefs[USER_RULES].orEmpty().mapNotNull(UserRule::decode).sortedBy { it.encode() },
                 imageSavePolicy = ImageSavePolicy.fromKey(prefs[IMAGE_SAVE_POLICY]) ?: ImageSavePolicy.DEFAULT,
                 fixtureRecorderEnabled = prefs[FIXTURE_RECORDER] ?: false,
+                pendingSuggestions = prefs[PENDING_SUGGESTIONS].orEmpty().mapNotNull(PendingSuggestion::decode)
+                    .sortedBy { it.packageName },
+                dismissedSuggestions = prefs[DISMISSED_SUGGESTIONS].orEmpty(),
+                auditLog = prefs[AUDIT_LOG].orEmpty().mapNotNull(AuditEntry::decode)
+                    .sortedByDescending { it.timestampMillis },
             )
         }
 
@@ -85,6 +92,38 @@ class DataStorePrivacySettingsRepository(
         dataStore.edit { it[FIXTURE_RECORDER] = enabled }
     }
 
+    override suspend fun recordSuggestion(suggestion: PendingSuggestion) {
+        dataStore.edit { prefs ->
+            val current = prefs[PENDING_SUGGESTIONS].orEmpty().mapNotNull(PendingSuggestion::decode)
+            prefs[PENDING_SUGGESTIONS] =
+                (current.filterNot { it.packageName == suggestion.packageName } + suggestion).map { it.encode() }.toSet()
+        }
+    }
+
+    override suspend fun removeSuggestion(packageName: String) {
+        dataStore.edit { prefs ->
+            val current = prefs[PENDING_SUGGESTIONS].orEmpty().mapNotNull(PendingSuggestion::decode)
+            prefs[PENDING_SUGGESTIONS] = current.filterNot { it.packageName == packageName }.map { it.encode() }.toSet()
+        }
+    }
+
+    override suspend fun dismissSuggestion(packageName: String) {
+        removeSuggestion(packageName)
+        dataStore.edit { prefs -> prefs[DISMISSED_SUGGESTIONS] = prefs[DISMISSED_SUGGESTIONS].orEmpty() + packageName }
+    }
+
+    override suspend fun appendAuditEntry(entry: AuditEntry) {
+        dataStore.edit { prefs ->
+            val current = prefs[AUDIT_LOG].orEmpty().mapNotNull(AuditEntry::decode)
+            val kept = (current + entry).sortedByDescending { it.timestampMillis }.take(MAX_AUDIT_ENTRIES)
+            prefs[AUDIT_LOG] = kept.map { it.encode() }.toSet()
+        }
+    }
+
+    override suspend fun clearAuditLog() {
+        dataStore.edit { it[AUDIT_LOG] = emptySet() }
+    }
+
     private fun writeRules(prefs: MutablePreferences, change: (List<UserRule>) -> List<UserRule>) {
         val current = prefs[USER_RULES].orEmpty().mapNotNull(UserRule::decode)
         prefs[USER_RULES] = change(current).map { it.encode() }.toSet()
@@ -105,5 +144,11 @@ class DataStorePrivacySettingsRepository(
         val USER_RULES = stringSetPreferencesKey("privacy_user_rules")
         val IMAGE_SAVE_POLICY = stringPreferencesKey("privacy_image_save_policy")
         val FIXTURE_RECORDER = booleanPreferencesKey("privacy_fixture_recorder")
+        val PENDING_SUGGESTIONS = stringSetPreferencesKey("privacy_pending_suggestions")
+        val DISMISSED_SUGGESTIONS = stringSetPreferencesKey("privacy_dismissed_suggestions")
+        val AUDIT_LOG = stringSetPreferencesKey("privacy_audit_log")
+
+        /** Tope del registro: solo metadatos, pero sin limite crecería sin fin. */
+        const val MAX_AUDIT_ENTRIES = 50
     }
 }

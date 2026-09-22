@@ -95,6 +95,17 @@
     <string name="privacy_rules_title">Excepciones tuyas</string>
     <string name="privacy_rules_empty">Aún no has añadido ninguna. Una excepción gana siempre a las listas.</string>
     <string name="privacy_rules_add">Añadir app</string>
+
+    <string name="privacy_suggestions_title">Propuestas pendientes</string>
+    <string name="privacy_suggestions_as">Proponemos tratarla como: %1$s</string>
+    <string name="privacy_suggestions_accept">Aceptar</string>
+    <string name="privacy_suggestions_dismiss">No, gracias</string>
+
+    <string name="privacy_audit_title">Registro de actividad</string>
+    <string name="privacy_audit_empty">Vacío.</string>
+    <string name="privacy_audit_clear">Vaciar registro</string>
+    <string name="privacy_audit_read">Leído</string>
+    <string name="privacy_audit_protected">Protegida, no leído</string>
     <string name="privacy_rules_remove">Quitar</string>
     <string name="privacy_pick_app">Elige una app</string>
     <string name="privacy_pick_empty">No se encontraron apps.</string>

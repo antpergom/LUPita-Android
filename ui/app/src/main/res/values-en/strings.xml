@@ -95,6 +95,17 @@
     <string name="privacy_rules_title">Your exceptions</string>
     <string name="privacy_rules_empty">You have not added any yet. An exception always beats the lists.</string>
     <string name="privacy_rules_add">Add app</string>
+
+    <string name="privacy_suggestions_title">Pending proposals</string>
+    <string name="privacy_suggestions_as">We suggest treating it as: %1$s</string>
+    <string name="privacy_suggestions_accept">Accept</string>
+    <string name="privacy_suggestions_dismiss">No, thanks</string>
+
+    <string name="privacy_audit_title">Activity log</string>
+    <string name="privacy_audit_empty">Empty.</string>
+    <string name="privacy_audit_clear">Clear log</string>
+    <string name="privacy_audit_read">Read</string>
+    <string name="privacy_audit_protected">Protected, not read</string>
     <string name="privacy_rules_remove">Remove</string>
     <string name="privacy_pick_app">Choose an app</string>
     <string name="privacy_pick_empty">No apps found.</string>

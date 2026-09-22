@@ -7,7 +7,10 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.antoniopg.lupita.core.model.AppMatch
+import com.antoniopg.lupita.core.model.AuditEntry
+import com.antoniopg.lupita.core.model.AuditOutcome
 import com.antoniopg.lupita.core.model.ImageSavePolicy
+import com.antoniopg.lupita.core.model.PendingSuggestion
 import com.antoniopg.lupita.core.model.PrivacySettings
 import com.antoniopg.lupita.core.model.PrivacyTier
 import com.antoniopg.lupita.core.model.SecurityMeasure
@@ -95,6 +98,52 @@ class DataStorePrivacySettingsRepositoryTest {
         repo.setFixtureRecorderEnabled(true)
 
         assertTrue(repo.settings.first().fixtureRecorderEnabled)
+    }
+
+    @Test
+    fun `a suggestion can be recorded, replaced by app and removed`() = runTest {
+        repo.recordSuggestion(PendingSuggestion("com.x.bank", "banking", PrivacyTier.PROTECTED))
+        assertEquals(1, repo.settings.first().pendingSuggestions.size)
+
+        // misma app: sustituye, no duplica
+        repo.recordSuggestion(PendingSuggestion("com.x.bank", "banking", PrivacyTier.SENSITIVE))
+        val pending = repo.settings.first().pendingSuggestions
+        assertEquals(1, pending.size)
+        assertEquals(PrivacyTier.SENSITIVE, pending.single().tier)
+
+        repo.removeSuggestion("com.x.bank")
+        assertTrue(repo.settings.first().pendingSuggestions.isEmpty())
+    }
+
+    @Test
+    fun `dismissing a suggestion also removes it from the pending list`() = runTest {
+        repo.recordSuggestion(PendingSuggestion("com.x.bank", "banking", PrivacyTier.PROTECTED))
+
+        repo.dismissSuggestion("com.x.bank")
+
+        val s = repo.settings.first()
+        assertTrue(s.pendingSuggestions.isEmpty())
+        assertEquals(setOf("com.x.bank"), s.dismissedSuggestions)
+    }
+
+    @Test
+    fun `audit entries come back newest first and can be cleared`() = runTest {
+        repo.appendAuditEntry(AuditEntry(100, "com.a", PrivacyTier.SENSITIVE, AuditOutcome.READ, 5))
+        repo.appendAuditEntry(AuditEntry(200, "com.b", PrivacyTier.PROTECTED, AuditOutcome.PROTECTED, 0))
+
+        assertEquals(listOf("com.b", "com.a"), repo.settings.first().auditLog.map { it.packageName })
+
+        repo.clearAuditLog()
+        assertTrue(repo.settings.first().auditLog.isEmpty())
+    }
+
+    @Test
+    fun `the audit log keeps only the most recent entries`() = runTest {
+        (1..60).forEach { i -> repo.appendAuditEntry(AuditEntry(i.toLong(), "com.$i", PrivacyTier.NORMAL, AuditOutcome.READ, 1)) }
+
+        val log = repo.settings.first().auditLog
+        assertEquals(50, log.size) // tope de MAX_AUDIT_ENTRIES en el repositorio
+        assertEquals(60L, log.first().timestampMillis) // el mas reciente se conserva
     }
 
     @Test

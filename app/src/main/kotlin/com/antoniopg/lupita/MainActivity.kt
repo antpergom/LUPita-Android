@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.antoniopg.lupita.core.model.AppMatch
 import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.ModelCatalog
 import com.antoniopg.lupita.core.model.PermissionState
@@ -28,6 +29,7 @@ import com.antoniopg.lupita.core.model.PrivacyRegions
 import com.antoniopg.lupita.core.model.PrivacySettings
 import com.antoniopg.lupita.capability.screen.LupitaAccessibilityService
 import com.antoniopg.lupita.core.model.RequiredPermission
+import com.antoniopg.lupita.core.model.UserRule
 import com.antoniopg.lupita.overlay.OverlayService
 import com.antoniopg.lupita.ui.app.AppScreen
 import com.antoniopg.lupita.ui.app.accessibility.AccessibilityUi
@@ -108,6 +110,14 @@ class MainActivity : ComponentActivity() {
                                     onPutRule = { scope.launch { repo.putUserRule(it) } },
                                     onRemoveRule = { scope.launch { repo.removeUserRule(it) } },
                                     onImageSavePolicy = { scope.launch { repo.setImageSavePolicy(it) } },
+                                    onAcceptSuggestion = {
+                                        scope.launch {
+                                            repo.putUserRule(UserRule(AppMatch.Exact(it.packageName), it.tier))
+                                            repo.removeSuggestion(it.packageName)
+                                        }
+                                    },
+                                    onDismissSuggestion = { scope.launch { repo.dismissSuggestion(it) } },
+                                    onClearAuditLog = { scope.launch { repo.clearAuditLog() } },
                                     loadInstalledApps = { loadInstalledApps(applicationContext) },
                                 ),
                             )

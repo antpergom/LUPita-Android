@@ -55,6 +55,7 @@ class PrivacyGate(private val catalog: PrivacyCatalog) {
     /** Solo una PROPUESTA: separa el paquete en trozos y busca palabras del catalogo dentro de ellos. */
     private fun suggestByName(packageName: String, settings: PrivacySettings): NameSuggestion? {
         if (!settings.isEnabled(SecurityMeasure.PROPOSE_BY_NAME)) return null
+        if (packageName in settings.dismissedSuggestions) return null
         val parts = packageName.lowercase().split('.', '_', '-')
         val rule = catalog.keywords.firstOrNull { keyword ->
             keyword.regions.any(settings.enabledRegions::contains) && parts.any { it.contains(keyword.word) }

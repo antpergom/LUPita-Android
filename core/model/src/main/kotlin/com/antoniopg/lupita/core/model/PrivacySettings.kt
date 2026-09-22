@@ -78,6 +78,12 @@ data class PrivacySettings(
      * nunca con apps protegidas (`content == null` antes de llegar aqui); ver docs/SEGURIDAD.md.
      */
     val fixtureRecorderEnabled: Boolean = false,
+    /** Propuestas por nombre pendientes de aceptar o descartar (F1.5). */
+    val pendingSuggestions: List<PendingSuggestion> = emptyList(),
+    /** Apps para las que el usuario ya dijo que no: `PrivacyGate` deja de proponerlas. */
+    val dismissedSuggestions: Set<String> = emptySet(),
+    /** Registro de auditoria (F1.5): solo metadatos, mas reciente primero. */
+    val auditLog: List<AuditEntry> = emptyList(),
 ) {
     fun isEnabled(measure: SecurityMeasure): Boolean = measures[measure] ?: measure.defaultEnabled
 }
@@ -103,4 +109,18 @@ interface PrivacySettingsRepository {
     suspend fun setImageSavePolicy(policy: ImageSavePolicy)
 
     suspend fun setFixtureRecorderEnabled(enabled: Boolean)
+
+    /** Anade o actualiza una propuesta pendiente para esa app. */
+    suspend fun recordSuggestion(suggestion: PendingSuggestion)
+
+    /** La app ya tiene una regla (aceptada) o no interesa: deja de estar pendiente. */
+    suspend fun removeSuggestion(packageName: String)
+
+    /** Como [removeSuggestion], y ademas evita que `PrivacyGate` vuelva a proponerla. */
+    suspend fun dismissSuggestion(packageName: String)
+
+    /** Guarda una entrada nueva; el repositorio decide cuantas conserva. */
+    suspend fun appendAuditEntry(entry: AuditEntry)
+
+    suspend fun clearAuditLog()
 }

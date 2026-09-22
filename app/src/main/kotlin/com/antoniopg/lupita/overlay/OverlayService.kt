@@ -26,9 +26,15 @@ import com.antoniopg.lupita.capability.screen.ProjectionSession
 import com.antoniopg.lupita.capability.screen.RegionImage
 import com.antoniopg.lupita.capture.ProjectionConsentActivity
 import com.antoniopg.lupita.core.model.AppSection
+import com.antoniopg.lupita.core.model.AuditEntry
+import com.antoniopg.lupita.core.model.AuditOutcome
 import com.antoniopg.lupita.core.model.ContextBundle
+import com.antoniopg.lupita.core.model.ContextHeader
+import com.antoniopg.lupita.core.model.PendingSuggestion
+import com.antoniopg.lupita.core.model.PrivacySettings
 import com.antoniopg.lupita.core.model.EncodedImage
 import com.antoniopg.lupita.core.model.ImageSavePolicy
+import com.antoniopg.lupita.core.model.SecurityMeasure
 import com.antoniopg.lupita.core.model.ScreenSource
 import com.antoniopg.lupita.core.model.SelectionRect
 import com.antoniopg.lupita.ui.overlay.AskSaveOverlay
@@ -123,6 +129,7 @@ class OverlayService : Service() {
         val outcome = withContext(Dispatchers.Default) {
             CapturePipeline(source, container.privacyGate).run(rect, settings)
         }
+        recordSuggestion(outcome)
         toast(
             summarize(
                 outcome,
@@ -130,6 +137,29 @@ class OverlayService : Service() {
                 settleMs,
                 settings.imageSavePolicy,
                 settings.fixtureRecorderEnabled,
+                settings.isEnabled(SecurityMeasure.AUDIT_LOG),
+            ),
+        )
+    }
+
+    /** La propuesta por nombre (si la hay) se registra siempre: no depende de la medida de auditoria. */
+    private suspend fun recordSuggestion(outcome: CapturePipeline.Outcome) {
+        if (outcome !is CapturePipeline.Outcome.Ready) return
+        val header = outcome.bundle.header
+        val suggestion = header.suggestion ?: return
+        (application as LupitaApp).container.privacySettings
+            .recordSuggestion(PendingSuggestion(header.packageName, suggestion.group, suggestion.tier))
+    }
+
+    /** Solo metadatos (hora, app, nivel, resultado, tamano): ver docs/SEGURIDAD.md. */
+    private suspend fun appendAudit(header: ContextHeader, kilobytes: Int) {
+        (application as LupitaApp).container.privacySettings.appendAuditEntry(
+            AuditEntry(
+                timestampMillis = System.currentTimeMillis(),
+                packageName = header.packageName,
+                tier = header.tier,
+                outcome = if (header.contentRead) AuditOutcome.READ else AuditOutcome.PROTECTED,
+                kilobytes = kilobytes,
             ),
         )
     }
@@ -148,6 +178,7 @@ class OverlayService : Service() {
         settleMs: Long,
         savePolicy: ImageSavePolicy,
         recorderEnabled: Boolean,
+        auditEnabled: Boolean,
     ): String = when (outcome) {
         is CapturePipeline.Outcome.Failed ->
             getString(R.string.capture_failed, outcome.reason.name, outcome.detail ?: "-")
@@ -156,21 +187,24 @@ class OverlayService : Service() {
             val bundle = outcome.bundle
             val content = bundle.content
             if (content == null) {
+                if (auditEnabled) appendAudit(bundle.header, kilobytes = 0)
                 getString(R.string.capture_protected, bundle.header.decisionSource.name)
             } else {
                 val image = content.pixels
                 val encoded = image?.let {
                     withContext(Dispatchers.Default) { RegionImage.encode(it, content.provenance, settleMs) }
                 }
+                val kb = (encoded?.bytes?.size ?: 0) / 1024
                 // Protegidas nunca llegan aqui (content == null arriba): la politica solo se aplica a lo leido.
                 if (encoded != null && recorderEnabled) handleSave(bundle, encoded, savePolicy.effective(bundle.header.tier))
+                if (auditEnabled) appendAudit(bundle.header, kb)
                 getString(
                     R.string.capture_read,
                     bundle.header.tier.name,
                     content.nodes.sumOf { n -> n.flatten().count() },
                     image?.width ?: 0,
                     image?.height ?: 0,
-                    (encoded?.bytes?.size ?: 0) / 1024,
+                    kb,
                     ms,
                 )
             }
