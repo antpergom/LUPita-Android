@@ -19,6 +19,7 @@ import android.widget.Toast
 import com.antoniopg.lupita.LupitaApp
 import com.antoniopg.lupita.MainActivity
 import com.antoniopg.lupita.R
+import com.antoniopg.lupita.capability.context.ContextNormalizer
 import com.antoniopg.lupita.capability.privacy.CapturePipeline
 import com.antoniopg.lupita.capability.screen.AccessibilityScreenSource
 import com.antoniopg.lupita.capability.screen.ProjectionScreenSource
@@ -26,8 +27,10 @@ import com.antoniopg.lupita.capability.screen.ProjectionSession
 import com.antoniopg.lupita.capability.screen.RegionImage
 import com.antoniopg.lupita.capture.ProjectionConsentActivity
 import com.antoniopg.lupita.core.model.AppSection
+import com.antoniopg.lupita.core.model.ArtifactHash
 import com.antoniopg.lupita.core.model.AuditEntry
 import com.antoniopg.lupita.core.model.AuditOutcome
+import com.antoniopg.lupita.core.model.ContentPattern
 import com.antoniopg.lupita.core.model.ContextBundle
 import com.antoniopg.lupita.core.model.ContextHeader
 import com.antoniopg.lupita.core.model.PendingSuggestion
@@ -198,6 +201,9 @@ class OverlayService : Service() {
                 // Protegidas nunca llegan aqui (content == null arriba): la politica solo se aplica a lo leido.
                 if (encoded != null && recorderEnabled) handleSave(bundle, encoded, savePolicy.effective(bundle.header.tier))
                 if (auditEnabled) appendAudit(bundle.header, kb)
+                // F2: normalizacion determinista (filtrado, orden de lectura, roles) + artefacto por hash del texto.
+                val normalized = ContextNormalizer.normalize(content.nodes)
+                val textArtifact = ArtifactHash.of(normalized.plainText)
                 getString(
                     R.string.capture_read,
                     bundle.header.tier.name,
@@ -206,6 +212,11 @@ class OverlayService : Service() {
                     image?.height ?: 0,
                     kb,
                     ms,
+                    normalized.nodes.size,
+                    getString(
+                        if (normalized.pattern == ContentPattern.SOCIAL_POST) R.string.pattern_social_post else R.string.pattern_unknown,
+                    ),
+                    textArtifact.hex.take(8),
                 )
             }
         }

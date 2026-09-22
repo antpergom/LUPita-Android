@@ -49,6 +49,7 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":capability:privacy"))
     implementation(project(":capability:screen"))
+    implementation(project(":capability:context"))
     implementation(project(":ui:overlay"))
     implementation(project(":ui:app"))
     implementation(project(":ui:theme"))
