@@ -174,6 +174,9 @@ class MainActivity : ComponentActivity() {
     private fun refresh() {
         permissions = readPermissions()
         accessibilityEnabled = isAccessibilityServiceEnabled()
+        // La lista de Depuracion se calcula una vez por valor de debugRefresh (remember): sin esto, volver
+        // a la app tras capturar (sin recrear la Activity) dejaba la lista con lo que hubiera al abrirla.
+        debugRefresh++
         // Decidido: abrir la app SIEMPRE arranca la burbuja, esté apagada o no. Es la unica via de
         // volver a encenderla (solo se apaga desde la notificacion).
         if (permissions.allGranted) OverlayService.start(this)
