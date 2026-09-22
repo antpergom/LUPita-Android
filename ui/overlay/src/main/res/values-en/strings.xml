@@ -24,4 +24,9 @@
     <string name="capture_confirm">Analyze</string>
     <string name="menu_quit">Close LUPita and the bubble</string>
     <string name="dismiss_target">Drop here to remove the bubble</string>
+
+    <string name="ask_save_title">Save this capture?</string>
+    <string name="ask_save_body">%1$s. Encryption at rest is not implemented yet (see Privacy and security).</string>
+    <string name="ask_save_confirm">Save</string>
+    <string name="ask_save_dismiss">Don\'t save</string>
 </resources>

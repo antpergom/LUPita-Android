@@ -57,6 +57,15 @@
     <string name="privacy_unknown_hint">Las que no están en ninguna lista. Recomendado: Sensible.</string>
 
     <string name="privacy_measures_title">Medidas de seguridad</string>
+
+    <string name="save_policy_title">Guardar la imagen enviada</string>
+    <string name="save_policy_hint">En apps sensibles se pregunta siempre, aunque elijas «siempre».</string>
+    <string name="save_policy_always">Siempre</string>
+    <string name="save_policy_always_desc">La imagen se guarda en el dispositivo.</string>
+    <string name="save_policy_ask">Preguntar antes</string>
+    <string name="save_policy_ask_desc">Confirmas si se guarda, captura a captura.</string>
+    <string name="save_policy_never">Nunca</string>
+    <string name="save_policy_never_desc">No se guarda ninguna imagen en el dispositivo.</string>
     <string name="measure_app_control">Control por app</string>
     <string name="measure_app_control_desc">Aplica un nivel de sensibilidad a cada app. Si lo desactivas, todo se trata como normal.</string>
     <string name="measure_drop_password">Ignorar campos de contraseña</string>

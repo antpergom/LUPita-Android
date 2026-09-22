@@ -28,8 +28,10 @@ import com.antoniopg.lupita.capture.ProjectionConsentActivity
 import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.ContextBundle
 import com.antoniopg.lupita.core.model.EncodedImage
+import com.antoniopg.lupita.core.model.ImageSavePolicy
 import com.antoniopg.lupita.core.model.ScreenSource
 import com.antoniopg.lupita.core.model.SelectionRect
+import com.antoniopg.lupita.ui.overlay.AskSaveOverlay
 import com.antoniopg.lupita.ui.overlay.BubbleOverlay
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -121,7 +123,7 @@ class OverlayService : Service() {
         val outcome = withContext(Dispatchers.Default) {
             CapturePipeline(source, container.privacyGate).run(rect, settings)
         }
-        toast(summarize(outcome, SystemClock.elapsedRealtime() - started, settleMs))
+        toast(summarize(outcome, SystemClock.elapsedRealtime() - started, settleMs, settings.imageSavePolicy))
     }
 
     /** Quita la burbuja y cierra la app: la X de abajo y el boton del panel. */
@@ -132,7 +134,12 @@ class OverlayService : Service() {
         stopSelf()
     }
 
-    private suspend fun summarize(outcome: CapturePipeline.Outcome, ms: Long, settleMs: Long): String = when (outcome) {
+    private suspend fun summarize(
+        outcome: CapturePipeline.Outcome,
+        ms: Long,
+        settleMs: Long,
+        savePolicy: ImageSavePolicy,
+    ): String = when (outcome) {
         is CapturePipeline.Outcome.Failed ->
             getString(R.string.capture_failed, outcome.reason.name, outcome.detail ?: "-")
 
@@ -146,7 +153,8 @@ class OverlayService : Service() {
                 val encoded = image?.let {
                     withContext(Dispatchers.Default) { RegionImage.encode(it, content.provenance, settleMs) }
                 }
-                if (encoded != null) debugSave(bundle, encoded)
+                // Protegidas nunca llegan aqui (content == null arriba): la politica solo se aplica a lo leido.
+                if (encoded != null) handleSave(bundle, encoded, savePolicy.effective(bundle.header.tier))
                 getString(
                     R.string.capture_read,
                     bundle.header.tier.name,
@@ -156,6 +164,19 @@ class OverlayService : Service() {
                     (encoded?.bytes?.size ?: 0) / 1024,
                     ms,
                 )
+            }
+        }
+    }
+
+    /** Decidido 2026-09-22: siempre / preguntar / nunca. En «preguntar», una ventana propia lo confirma. */
+    private fun handleSave(bundle: ContextBundle, encoded: EncodedImage, effective: ImageSavePolicy) {
+        when (effective) {
+            ImageSavePolicy.NEVER -> Unit
+            ImageSavePolicy.ALWAYS -> debugSave(bundle, encoded)
+            ImageSavePolicy.ASK -> {
+                val label = bundle.header.appLabel ?: bundle.header.packageName
+                val summary = getString(R.string.ask_save_summary, label, encoded.bytes.size / 1024)
+                AskSaveOverlay(this).show(summary) { save -> if (save) debugSave(bundle, encoded) }
             }
         }
     }

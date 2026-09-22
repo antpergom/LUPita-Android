@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.antoniopg.lupita.core.model.AppMatch
+import com.antoniopg.lupita.core.model.ImageSavePolicy
 import com.antoniopg.lupita.core.model.InstalledApp
 import com.antoniopg.lupita.core.model.PrivacyCatalog
 import com.antoniopg.lupita.core.model.PrivacySettings
@@ -54,6 +55,8 @@ import com.antoniopg.lupita.ui.app.R
 import com.antoniopg.lupita.ui.app.SectionLabel
 import com.antoniopg.lupita.ui.app.SwitchRow
 import com.antoniopg.lupita.ui.app.TierSelector
+import com.antoniopg.lupita.ui.app.savePolicyDescription
+import com.antoniopg.lupita.ui.app.savePolicyLabel
 import com.antoniopg.lupita.ui.app.tierDescription
 import com.antoniopg.lupita.ui.app.tierLabel
 import com.antoniopg.lupita.ui.theme.Lupita
@@ -68,6 +71,7 @@ class PrivacyActions(
     val onRegion: (String, Boolean) -> Unit,
     val onPutRule: (UserRule) -> Unit,
     val onRemoveRule: (AppMatch) -> Unit,
+    val onImageSavePolicy: (ImageSavePolicy) -> Unit,
     val loadInstalledApps: suspend () -> List<InstalledApp>,
 )
 
@@ -152,6 +156,23 @@ fun PrivacyScreen(ui: PrivacyUi, onBack: () -> Unit, modifier: Modifier = Modifi
                 )
             }
         }
+        Spacer(Modifier.height(20.dp))
+
+        // 2b) Guardado de la imagen enviada
+        SectionLabel(stringResource(R.string.save_policy_title))
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            ImageSavePolicy.entries.forEach { policy ->
+                ChoiceRow(
+                    label = savePolicyLabel(policy),
+                    description = savePolicyDescription(policy),
+                    selected = policy == s.imageSavePolicy,
+                    showCheck = false,
+                    onClick = { actions.onImageSavePolicy(policy) },
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(stringResource(R.string.save_policy_hint), color = c.subtle, fontSize = 11.sp)
         Spacer(Modifier.height(20.dp))
 
         // 3) Regiones

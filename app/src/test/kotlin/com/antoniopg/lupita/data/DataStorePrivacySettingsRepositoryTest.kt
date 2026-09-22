@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.antoniopg.lupita.core.model.AppMatch
+import com.antoniopg.lupita.core.model.ImageSavePolicy
 import com.antoniopg.lupita.core.model.PrivacySettings
 import com.antoniopg.lupita.core.model.PrivacyTier
 import com.antoniopg.lupita.core.model.SecurityMeasure
@@ -72,6 +73,22 @@ class DataStorePrivacySettingsRepositoryTest {
     }
 
     @Test
+    fun `the image save policy defaults to always and is remembered`() = runTest {
+        assertEquals(ImageSavePolicy.ALWAYS, repo.settings.first().imageSavePolicy)
+
+        repo.setImageSavePolicy(ImageSavePolicy.NEVER)
+
+        assertEquals(ImageSavePolicy.NEVER, repo.settings.first().imageSavePolicy)
+    }
+
+    @Test
+    fun `a corrupt stored save policy falls back to the default`() = runTest {
+        store.edit { it[stringPreferencesKey("privacy_image_save_policy")] = "whatever" }
+
+        assertEquals(ImageSavePolicy.DEFAULT, repo.settings.first().imageSavePolicy)
+    }
+
+    @Test
     fun `a group level can be overridden and reset`() = runTest {
         repo.setGroupTier("social", PrivacyTier.SENSITIVE)
         repo.setGroupTier("banking", PrivacyTier.NORMAL)
@@ -128,6 +145,7 @@ class DataStorePrivacySettingsRepositoryTest {
         repo.setGroupTier("social", PrivacyTier.SENSITIVE)
         repo.setRegionEnabled("ES", false)
         repo.putUserRule(UserRule(AppMatch.Exact("com.mi.banco"), PrivacyTier.PROTECTED))
+        repo.setImageSavePolicy(ImageSavePolicy.ASK)
 
         val after = DataStorePrivacySettingsRepository(store, defaults).settings.first()
 
@@ -136,5 +154,6 @@ class DataStorePrivacySettingsRepositoryTest {
         assertEquals(mapOf("social" to PrivacyTier.SENSITIVE), after.groupTiers)
         assertEquals(setOf("GLOBAL"), after.enabledRegions)
         assertEquals(1, after.userRules.size)
+        assertEquals(ImageSavePolicy.ASK, after.imageSavePolicy)
     }
 }

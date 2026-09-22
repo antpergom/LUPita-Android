@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.antoniopg.lupita.core.model.AppMatch
+import com.antoniopg.lupita.core.model.ImageSavePolicy
 import com.antoniopg.lupita.core.model.PrivacySettings
 import com.antoniopg.lupita.core.model.PrivacySettingsRepository
 import com.antoniopg.lupita.core.model.PrivacyTier
@@ -41,6 +42,7 @@ class DataStorePrivacySettingsRepository(
                 groupTiers = prefs[GROUP_TIERS].orEmpty().mapNotNull(::decodeGroupTier).toMap(),
                 enabledRegions = prefs[REGIONS] ?: defaultRegions,
                 userRules = prefs[USER_RULES].orEmpty().mapNotNull(UserRule::decode).sortedBy { it.encode() },
+                imageSavePolicy = ImageSavePolicy.fromKey(prefs[IMAGE_SAVE_POLICY]) ?: ImageSavePolicy.DEFAULT,
             )
         }
 
@@ -74,6 +76,10 @@ class DataStorePrivacySettingsRepository(
         dataStore.edit { prefs -> writeRules(prefs) { it.filterNot { r -> r.match == match } } }
     }
 
+    override suspend fun setImageSavePolicy(policy: ImageSavePolicy) {
+        dataStore.edit { it[IMAGE_SAVE_POLICY] = policy.key }
+    }
+
     private fun writeRules(prefs: MutablePreferences, change: (List<UserRule>) -> List<UserRule>) {
         val current = prefs[USER_RULES].orEmpty().mapNotNull(UserRule::decode)
         prefs[USER_RULES] = change(current).map { it.encode() }.toSet()
@@ -92,5 +98,6 @@ class DataStorePrivacySettingsRepository(
         val GROUP_TIERS = stringSetPreferencesKey("privacy_group_tiers")
         val REGIONS = stringSetPreferencesKey("privacy_regions")
         val USER_RULES = stringSetPreferencesKey("privacy_user_rules")
+        val IMAGE_SAVE_POLICY = stringPreferencesKey("privacy_image_save_policy")
     }
 }

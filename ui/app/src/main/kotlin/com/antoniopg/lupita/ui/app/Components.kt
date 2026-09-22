@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.antoniopg.lupita.core.model.ImageSavePolicy
 import com.antoniopg.lupita.core.model.PrivacyTier
 import com.antoniopg.lupita.ui.theme.Lupita
 
@@ -152,6 +153,24 @@ internal fun tierDescription(tier: PrivacyTier): String = stringResource(
         PrivacyTier.PROTECTED -> R.string.tier_protected_desc
         PrivacyTier.SENSITIVE -> R.string.tier_sensitive_desc
         PrivacyTier.NORMAL -> R.string.tier_normal_desc
+    },
+)
+
+@Composable
+internal fun savePolicyLabel(policy: ImageSavePolicy): String = stringResource(
+    when (policy) {
+        ImageSavePolicy.ALWAYS -> R.string.save_policy_always
+        ImageSavePolicy.ASK -> R.string.save_policy_ask
+        ImageSavePolicy.NEVER -> R.string.save_policy_never
+    },
+)
+
+@Composable
+internal fun savePolicyDescription(policy: ImageSavePolicy): String = stringResource(
+    when (policy) {
+        ImageSavePolicy.ALWAYS -> R.string.save_policy_always_desc
+        ImageSavePolicy.ASK -> R.string.save_policy_ask_desc
+        ImageSavePolicy.NEVER -> R.string.save_policy_never_desc
     },
 )
 

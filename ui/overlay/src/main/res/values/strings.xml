@@ -24,4 +24,9 @@
     <string name="capture_confirm">Analizar</string>
     <string name="menu_quit">Cerrar LUPita y la burbuja</string>
     <string name="dismiss_target">Suelta aquí para quitar la burbuja</string>
+
+    <string name="ask_save_title">¿Guardar esta captura?</string>
+    <string name="ask_save_body">%1$s. El cifrado en reposo todavía no está implementado (ver Privacidad y seguridad).</string>
+    <string name="ask_save_confirm">Guardar</string>
+    <string name="ask_save_dismiss">No guardar</string>
 </resources>

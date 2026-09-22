@@ -71,6 +71,8 @@ data class PrivacySettings(
     val groupTiers: Map<String, PrivacyTier> = emptyMap(),
     val enabledRegions: Set<String> = setOf(PrivacyRegions.GLOBAL),
     val userRules: List<UserRule> = emptyList(),
+    /** Si se guarda la imagen enviada (decision 2026-09-22): siempre por defecto. Ver [ImageSavePolicy]. */
+    val imageSavePolicy: ImageSavePolicy = ImageSavePolicy.DEFAULT,
 ) {
     fun isEnabled(measure: SecurityMeasure): Boolean = measures[measure] ?: measure.defaultEnabled
 }
@@ -92,4 +94,6 @@ interface PrivacySettingsRepository {
     suspend fun putUserRule(rule: UserRule)
 
     suspend fun removeUserRule(match: AppMatch)
+
+    suspend fun setImageSavePolicy(policy: ImageSavePolicy)
 }

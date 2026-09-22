@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
                                     onRegion = { r, on -> scope.launch { repo.setRegionEnabled(r, on) } },
                                     onPutRule = { scope.launch { repo.putUserRule(it) } },
                                     onRemoveRule = { scope.launch { repo.removeUserRule(it) } },
+                                    onImageSavePolicy = { scope.launch { repo.setImageSavePolicy(it) } },
                                     loadInstalledApps = { loadInstalledApps(applicationContext) },
                                 ),
                             )
