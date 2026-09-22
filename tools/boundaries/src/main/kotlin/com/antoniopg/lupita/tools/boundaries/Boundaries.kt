@@ -20,7 +20,9 @@ private val ALLOWED_DEPS: Map<Kind, Set<Kind>> = mapOf(
 )
 
 /** Tipos que deben ser Kotlin puro: sin `android.` ni `androidx.`. */
-private val PURE_KINDS = setOf(Kind.CORE, Kind.CAPABILITY, Kind.SOURCE)
+// TECHNICAL.md marca :orchestrator como "no" Android (plan, cache, presupuesto, colas: nada de eso lo
+// necesita); antes de F4 no habia ningun modulo :orchestrator que lo pusiera a prueba.
+private val PURE_KINDS = setOf(Kind.CORE, Kind.CAPABILITY, Kind.SOURCE, Kind.ORCHESTRATOR)
 
 /** Excepciones declaradas: modulos cuyo trabajo ES tocar Android (accesibilidad, captura y OCR con ML Kit). */
 private val ANDROID_ALLOWED = setOf(":capability:screen", ":capability:ocr")

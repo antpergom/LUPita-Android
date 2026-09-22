@@ -25,6 +25,7 @@ rootProject.name = "lupita"
 // build si se rompen) -- si anades un modulo nuevo, clasificalo alli o el build fallara a proposito.
 include(":app")
 include(":core:model")
+include(":orchestrator")
 include(":capability:privacy")
 include(":capability:screen")
 include(":capability:context")
