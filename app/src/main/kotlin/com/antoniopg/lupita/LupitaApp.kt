@@ -6,12 +6,15 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.antoniopg.lupita.capability.privacy.PrivacyCatalogParser
 import com.antoniopg.lupita.capability.privacy.PrivacyGate
+import com.antoniopg.lupita.core.model.BudgetDefaults
+import com.antoniopg.lupita.core.model.BudgetSettingsRepository
 import com.antoniopg.lupita.core.model.ModelCatalog
 import com.antoniopg.lupita.core.model.ModelOption
 import com.antoniopg.lupita.core.model.PrivacyCatalog
 import com.antoniopg.lupita.core.model.PrivacyRegions
 import com.antoniopg.lupita.core.model.PrivacySettingsRepository
 import com.antoniopg.lupita.core.model.SettingsRepository
+import com.antoniopg.lupita.data.DataStoreBudgetSettingsRepository
 import com.antoniopg.lupita.data.DataStorePrivacySettingsRepository
 import com.antoniopg.lupita.data.DataStoreSettingsRepository
 
@@ -48,6 +51,14 @@ class AppContainer(private val context: Context) {
 
     /** El unico punto que decide el nivel de una app; se consulta ANTES de capturar (F1.3). */
     val privacyGate: PrivacyGate by lazy { PrivacyGate(privacyCatalog) }
+
+    /** Configuracion de presupuesto (F4): solo los topes que el usuario ha tocado; el resto sale de [budgetDefaults]. */
+    val budgetSettings: BudgetSettingsRepository = DataStoreBudgetSettingsRepository(dataStore)
+
+    /** Valores de fabrica de los topes, de `assets/budget_defaults.json`. Sin fichero: los de [BudgetDefaults.FALLBACK]. */
+    val budgetDefaults: BudgetDefaults by lazy {
+        runCatching { readAsset("budget_defaults.json") }.map(BudgetDefaults::parse).getOrDefault(BudgetDefaults.FALLBACK)
+    }
 
     private fun readAsset(name: String): String = context.assets.open(name).bufferedReader().use { it.readText() }
 }

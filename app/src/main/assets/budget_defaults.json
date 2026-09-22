@@ -1,0 +1,15 @@
+{
+  "depths": [
+    { "depth": "low", "costLimitUsd": 0.02, "maxPaidCalls": 2 },
+    { "depth": "medium", "costLimitUsd": 0.10, "maxPaidCalls": 6 },
+    { "depth": "high", "costLimitUsd": 0.50, "maxPaidCalls": 20 }
+  ],
+  "tools": [
+    { "tool": "general", "limitUsd": 1.0 },
+    { "tool": "verify", "limitUsd": 1.0 },
+    { "tool": "ai_detect", "limitUsd": 1.0 },
+    { "tool": "entity", "limitUsd": 1.0 }
+  ],
+  "globalLimitUsd": 20.0,
+  "globalPeriod": "monthly"
+}
