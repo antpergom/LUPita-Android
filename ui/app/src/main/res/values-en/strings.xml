@@ -23,6 +23,21 @@
 
     <string name="settings_privacy">Privacy</string>
     <string name="privacy_row_desc">Which apps are read, security measures and exceptions</string>
+    <string name="accessibility_row_title">Accessibility</string>
+    <string name="accessibility_row_desc">What LUPita reads and how to turn it on</string>
+    <string name="accessibility_title">Accessibility</string>
+    <string name="accessibility_status_on">On</string>
+    <string name="accessibility_status_off">Off</string>
+    <string name="accessibility_intro">LUPita needs the accessibility service to read the text of the area you choose. Before you turn it on, here is what it does and what it does not:</string>
+    <string name="accessibility_reads">Reads the text and structure of the app you have open.</string>
+    <string name="accessibility_reads_region">Only when you confirm a capture, and only for the area you drew.</string>
+    <string name="accessibility_never_protected">Never reads or captures anything from apps you mark as protected.</string>
+    <string name="accessibility_never_passwords">Never includes password fields, in any app.</string>
+    <string name="accessibility_never_raw">Nothing is saved raw on its own: only what you decide.</string>
+    <string name="accessibility_may_leave">What is read may be sent to the AI provider you choose for analysis, with the safety filters on.</string>
+    <string name="accessibility_more_detail">You can review and change each measure in Privacy and security.</string>
+    <string name="accessibility_activate">Turn on in system settings</string>
+    <string name="accessibility_manage">Manage in system settings</string>
 
     <string name="privacy_title">Privacy and security</string>
     <string name="privacy_back">Back</string>

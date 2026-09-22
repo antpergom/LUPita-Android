@@ -22,6 +22,8 @@ import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.LanguageOption
 import com.antoniopg.lupita.core.model.ModelOption
 import com.antoniopg.lupita.ui.app.history.HistoryScreen
+import com.antoniopg.lupita.ui.app.accessibility.AccessibilityDisclosureScreen
+import com.antoniopg.lupita.ui.app.accessibility.AccessibilityUi
 import com.antoniopg.lupita.ui.app.privacy.PrivacyScreen
 import com.antoniopg.lupita.ui.app.privacy.PrivacyUi
 import com.antoniopg.lupita.ui.app.settings.SettingsScreen
@@ -48,15 +50,18 @@ fun AppScreen(
     currentLanguage: String,
     onSelectLanguage: (String) -> Unit,
     privacy: PrivacyUi,
+    accessibility: AccessibilityUi,
     modifier: Modifier = Modifier,
 ) {
     val c = Lupita.colors
     var sectionKey by rememberSaveable { mutableStateOf((requestedSection ?: AppSection.SETTINGS).key) }
     var showPrivacy by rememberSaveable { mutableStateOf(false) }
+    var showAccessibility by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(requestedSection) {
         if (requestedSection != null) {
             sectionKey = requestedSection.key
             showPrivacy = false
+            showAccessibility = false
             onRequestConsumed()
         }
     }
@@ -79,6 +84,7 @@ fun AppScreen(
                     onClick = {
                         sectionKey = AppSection.SETTINGS.key
                         showPrivacy = false
+                        showAccessibility = false
                     },
                     icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                     label = { Text(stringResource(R.string.section_settings)) },
@@ -89,6 +95,7 @@ fun AppScreen(
                     onClick = {
                         sectionKey = AppSection.HISTORY.key
                         showPrivacy = false
+                        showAccessibility = false
                     },
                     icon = { Icon(Icons.Rounded.History, contentDescription = null) },
                     label = { Text(stringResource(R.string.section_history)) },
@@ -99,6 +106,11 @@ fun AppScreen(
     ) { padding ->
         when {
             section == AppSection.HISTORY -> HistoryScreen(modifier = Modifier.padding(padding))
+            showAccessibility -> AccessibilityDisclosureScreen(
+                ui = accessibility,
+                onBack = { showAccessibility = false },
+                modifier = Modifier.padding(padding),
+            )
             showPrivacy -> PrivacyScreen(ui = privacy, onBack = { showPrivacy = false }, modifier = Modifier.padding(padding))
             else -> SettingsScreen(
                 appName = appName,
@@ -110,6 +122,7 @@ fun AppScreen(
                 currentLanguage = currentLanguage,
                 onSelectLanguage = onSelectLanguage,
                 onOpenPrivacy = { showPrivacy = true },
+                onOpenAccessibility = { showAccessibility = true },
                 modifier = Modifier.padding(padding),
             )
         }

@@ -42,6 +42,7 @@ fun SettingsScreen(
     currentLanguage: String,
     onSelectLanguage: (String) -> Unit,
     onOpenPrivacy: () -> Unit,
+    onOpenAccessibility: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Lupita.colors
@@ -70,6 +71,12 @@ fun SettingsScreen(
             title = stringResource(R.string.privacy_title),
             description = stringResource(R.string.privacy_row_desc),
             onClick = onOpenPrivacy,
+        )
+        Spacer(Modifier.height(8.dp))
+        NavRow(
+            title = stringResource(R.string.accessibility_row_title),
+            description = stringResource(R.string.accessibility_row_desc),
+            onClick = onOpenAccessibility,
         )
         Spacer(Modifier.height(20.dp))
 

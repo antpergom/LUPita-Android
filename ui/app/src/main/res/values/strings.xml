@@ -23,6 +23,21 @@
 
     <string name="settings_privacy">Privacidad</string>
     <string name="privacy_row_desc">Qué apps se leen, medidas de seguridad y excepciones</string>
+    <string name="accessibility_row_title">Accesibilidad</string>
+    <string name="accessibility_row_desc">Qué lee LUPita y cómo activarlo</string>
+    <string name="accessibility_title">Accesibilidad</string>
+    <string name="accessibility_status_on">Activada</string>
+    <string name="accessibility_status_off">Desactivada</string>
+    <string name="accessibility_intro">LUPita necesita el servicio de accesibilidad para leer el texto de la zona que eliges. Antes de activarlo, esto es lo que hace y lo que no:</string>
+    <string name="accessibility_reads">Lee el texto y la estructura de la app que tengas abierta.</string>
+    <string name="accessibility_reads_region">Solo cuando confirmas una captura, y solo de la zona que has dibujado.</string>
+    <string name="accessibility_never_protected">Nunca lee ni captura nada de las apps que marques como protegidas.</string>
+    <string name="accessibility_never_passwords">Nunca incluye los campos de contraseña, en ninguna app.</string>
+    <string name="accessibility_never_raw">No guarda nada en bruto por su cuenta: solo lo que tú decidas.</string>
+    <string name="accessibility_may_leave">Lo leído puede enviarse al proveedor de IA que elijas para analizarlo, con los filtros de seguridad activados.</string>
+    <string name="accessibility_more_detail">Puedes revisar y cambiar cada medida en Privacidad y seguridad.</string>
+    <string name="accessibility_activate">Activar en Ajustes del sistema</string>
+    <string name="accessibility_manage">Gestionar en Ajustes del sistema</string>
 
     <string name="privacy_title">Privacidad y seguridad</string>
     <string name="privacy_back">Volver</string>

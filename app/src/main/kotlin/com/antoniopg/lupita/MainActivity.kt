@@ -1,6 +1,7 @@
 package com.antoniopg.lupita
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -24,9 +25,11 @@ import com.antoniopg.lupita.core.model.ModelCatalog
 import com.antoniopg.lupita.core.model.PermissionState
 import com.antoniopg.lupita.core.model.PrivacyRegions
 import com.antoniopg.lupita.core.model.PrivacySettings
+import com.antoniopg.lupita.capability.screen.LupitaAccessibilityService
 import com.antoniopg.lupita.core.model.RequiredPermission
 import com.antoniopg.lupita.overlay.OverlayService
 import com.antoniopg.lupita.ui.app.AppScreen
+import com.antoniopg.lupita.ui.app.accessibility.AccessibilityUi
 import com.antoniopg.lupita.ui.app.privacy.PrivacyActions
 import com.antoniopg.lupita.ui.app.privacy.PrivacyUi
 import com.antoniopg.lupita.ui.app.onboarding.OnboardingScreen
@@ -40,6 +43,7 @@ private data class StoredModel(val id: String?)
 class MainActivity : ComponentActivity() {
 
     private var permissions by mutableStateOf(PermissionState(overlay = false, notifications = false))
+    private var accessibilityEnabled by mutableStateOf(false)
 
     /** Peticion de seccion desde el menu de la burbuja; la pantalla la aplica y la olvida. */
     private var section by mutableStateOf<AppSection?>(null)
@@ -113,6 +117,10 @@ class MainActivity : ComponentActivity() {
                             currentLanguage = language,
                             onSelectLanguage = container.language::set,
                             privacy = privacy,
+                accessibility = AccessibilityUi(
+                    isEnabled = accessibilityEnabled,
+                    onOpenSettings = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
+                ),
                         )
                     } else {
                         OnboardingScreen(missing = missing, onRequest = ::request)
@@ -137,9 +145,21 @@ class MainActivity : ComponentActivity() {
 
     private fun refresh() {
         permissions = readPermissions()
+        accessibilityEnabled = isAccessibilityServiceEnabled()
         // Decidido: abrir la app SIEMPRE arranca la burbuja, esté apagada o no. Es la unica via de
         // volver a encenderla (solo se apaga desde la notificacion).
         if (permissions.allGranted) OverlayService.start(this)
+    }
+
+    /**
+     * El sistema no ofrece un callback: hay que releer `Settings.Secure` (se hace en cada `onResume`, igual
+     * que el resto de permisos). El servicio solo se activa a mano en Ajustes del sistema.
+     */
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        if (Settings.Secure.getInt(contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0) != 1) return false
+        val target = ComponentName(this, LupitaAccessibilityService::class.java).flattenToString()
+        val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+        return enabled?.split(':')?.any { it.equals(target, ignoreCase = true) } == true
     }
 
     private fun readPermissions() = PermissionState(
