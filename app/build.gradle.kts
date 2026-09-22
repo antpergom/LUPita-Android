@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -45,8 +46,16 @@ android {
     }
 }
 
+// Room genera el esquema como JSON versionado (F4 paso 3, primera BD del proyecto) — permite detectar
+// una migracion olvidada en revision de codigo, igual que hace el proyecto hermano.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.generateKotlin", "true")
+}
+
 dependencies {
     implementation(project(":core:model"))
+    implementation(project(":orchestrator"))
     implementation(project(":capability:privacy"))
     implementation(project(":capability:screen"))
     implementation(project(":capability:context"))
@@ -63,7 +72,11 @@ dependencies {
     implementation(libs.datastore.preferences)
     // Dispatchers.Main del scope del servicio; sin este artefacto falla en ejecucion.
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.room.testing)
 }

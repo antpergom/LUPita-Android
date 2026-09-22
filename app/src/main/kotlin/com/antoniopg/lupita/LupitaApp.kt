@@ -4,10 +4,12 @@ import android.app.Application
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.room.Room
 import com.antoniopg.lupita.capability.privacy.PrivacyCatalogParser
 import com.antoniopg.lupita.capability.privacy.PrivacyGate
 import com.antoniopg.lupita.core.model.BudgetDefaults
 import com.antoniopg.lupita.core.model.BudgetSettingsRepository
+import com.antoniopg.lupita.core.model.CostLogRepository
 import com.antoniopg.lupita.core.model.ModelCatalog
 import com.antoniopg.lupita.core.model.ModelOption
 import com.antoniopg.lupita.core.model.PrivacyCatalog
@@ -17,6 +19,8 @@ import com.antoniopg.lupita.core.model.SettingsRepository
 import com.antoniopg.lupita.data.DataStoreBudgetSettingsRepository
 import com.antoniopg.lupita.data.DataStorePrivacySettingsRepository
 import com.antoniopg.lupita.data.DataStoreSettingsRepository
+import com.antoniopg.lupita.data.RoomCostLogRepository
+import com.antoniopg.lupita.data.db.LupitaDatabase
 
 class LupitaApp : Application() {
     val container: AppContainer by lazy { AppContainer(this) }
@@ -59,6 +63,14 @@ class AppContainer(private val context: Context) {
     val budgetDefaults: BudgetDefaults by lazy {
         runCatching { readAsset("budget_defaults.json") }.map(BudgetDefaults::parse).getOrDefault(BudgetDefaults.FALLBACK)
     }
+
+    /** Primera BD Room del proyecto (F4 paso 3): solo el log de coste por ahora, ver LupitaDatabase.kt. */
+    private val database: LupitaDatabase by lazy {
+        Room.databaseBuilder(context, LupitaDatabase::class.java, "lupita_database").build()
+    }
+
+    /** Log de coste/modelo de cada llamada de pago — el registro "facilmente accesible" pedido por el usuario. */
+    val costLog: CostLogRepository by lazy { RoomCostLogRepository(database.costLogDao()) }
 
     private fun readAsset(name: String): String = context.assets.open(name).bufferedReader().use { it.readText() }
 }

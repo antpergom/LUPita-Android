@@ -19,6 +19,10 @@ mlkitTextRecognition = "16.0.1"
 # Confirmadas en mvnrepository.com/central.sonatype.com 2026-09-22.
 okhttp = "5.5.0"
 jsoup = "1.23.2"
+# Mismas versiones que el proyecto hermano (app-android-rrss-publisher), ya probadas juntas alli con
+# el mismo kotlin=2.4.10/agp=9.3.0 (F4 paso 3: primera BD Room de este proyecto).
+ksp = "2.3.11"
+room = "2.8.4"
 
 [libraries]
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -46,6 +50,11 @@ mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition"
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+
 [plugins]
 # Desde AGP 9.0 el soporte de Kotlin va integrado: NO se aplica "org.jetbrains.kotlin.android".
 # Solo los modulos JVM puros usan kotlin-jvm.
@@ -54,3 +63,4 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
