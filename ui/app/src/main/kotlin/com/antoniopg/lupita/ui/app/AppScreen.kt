@@ -24,6 +24,8 @@ import com.antoniopg.lupita.core.model.ModelOption
 import com.antoniopg.lupita.ui.app.history.HistoryScreen
 import com.antoniopg.lupita.ui.app.accessibility.AccessibilityDisclosureScreen
 import com.antoniopg.lupita.ui.app.accessibility.AccessibilityUi
+import com.antoniopg.lupita.ui.app.budget.BudgetScreen
+import com.antoniopg.lupita.ui.app.budget.BudgetUi
 import com.antoniopg.lupita.ui.app.debug.DebugScreen
 import com.antoniopg.lupita.ui.app.debug.DebugUi
 import com.antoniopg.lupita.ui.app.privacy.PrivacyScreen
@@ -52,6 +54,7 @@ fun AppScreen(
     currentLanguage: String,
     onSelectLanguage: (String) -> Unit,
     privacy: PrivacyUi,
+    budget: BudgetUi,
     accessibility: AccessibilityUi,
     /** `null` si no procede mostrarla (solo builds `debuggable`). */
     debug: DebugUi?,
@@ -60,12 +63,14 @@ fun AppScreen(
     val c = Lupita.colors
     var sectionKey by rememberSaveable { mutableStateOf((requestedSection ?: AppSection.SETTINGS).key) }
     var showPrivacy by rememberSaveable { mutableStateOf(false) }
+    var showBudget by rememberSaveable { mutableStateOf(false) }
     var showAccessibility by rememberSaveable { mutableStateOf(false) }
     var showDebug by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(requestedSection) {
         if (requestedSection != null) {
             sectionKey = requestedSection.key
             showPrivacy = false
+            showBudget = false
             showAccessibility = false
             showDebug = false
             onRequestConsumed()
@@ -90,6 +95,7 @@ fun AppScreen(
                     onClick = {
                         sectionKey = AppSection.SETTINGS.key
                         showPrivacy = false
+                        showBudget = false
                         showAccessibility = false
                         showDebug = false
                     },
@@ -102,6 +108,7 @@ fun AppScreen(
                     onClick = {
                         sectionKey = AppSection.HISTORY.key
                         showPrivacy = false
+                        showBudget = false
                         showAccessibility = false
                         showDebug = false
                     },
@@ -124,6 +131,7 @@ fun AppScreen(
                 onBack = { showDebug = false },
                 modifier = Modifier.padding(padding),
             )
+            showBudget -> BudgetScreen(ui = budget, onBack = { showBudget = false }, modifier = Modifier.padding(padding))
             showPrivacy -> PrivacyScreen(ui = privacy, onBack = { showPrivacy = false }, modifier = Modifier.padding(padding))
             else -> SettingsScreen(
                 appName = appName,
@@ -135,6 +143,7 @@ fun AppScreen(
                 currentLanguage = currentLanguage,
                 onSelectLanguage = onSelectLanguage,
                 onOpenPrivacy = { showPrivacy = true },
+                onOpenBudget = { showBudget = true },
                 onOpenAccessibility = { showAccessibility = true },
                 onOpenDebug = debug?.let { { showDebug = true } },
                 modifier = Modifier.padding(padding),

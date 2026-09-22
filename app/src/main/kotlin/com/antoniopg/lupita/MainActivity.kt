@@ -23,16 +23,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.antoniopg.lupita.core.model.AppMatch
 import com.antoniopg.lupita.core.model.AppSection
+import com.antoniopg.lupita.core.model.BudgetSettings
+import com.antoniopg.lupita.core.model.CostMicros
+import com.antoniopg.lupita.core.model.Depth
 import com.antoniopg.lupita.core.model.ModelCatalog
 import com.antoniopg.lupita.core.model.PermissionState
 import com.antoniopg.lupita.core.model.PrivacyRegions
 import com.antoniopg.lupita.core.model.PrivacySettings
 import com.antoniopg.lupita.capability.screen.LupitaAccessibilityService
 import com.antoniopg.lupita.core.model.RequiredPermission
+import com.antoniopg.lupita.core.model.ToolId
 import com.antoniopg.lupita.core.model.UserRule
 import com.antoniopg.lupita.overlay.OverlayService
 import com.antoniopg.lupita.ui.app.AppScreen
 import com.antoniopg.lupita.ui.app.accessibility.AccessibilityUi
+import com.antoniopg.lupita.ui.app.budget.BudgetDepthRow
+import com.antoniopg.lupita.ui.app.budget.BudgetToolRow
+import com.antoniopg.lupita.ui.app.budget.BudgetUi
 import com.antoniopg.lupita.ui.app.debug.DebugUi
 import com.antoniopg.lupita.ui.app.privacy.PrivacyActions
 import com.antoniopg.lupita.ui.app.privacy.PrivacyUi
@@ -52,6 +59,9 @@ class MainActivity : ComponentActivity() {
     /** Solo builds de desarrollo (`debuggable`): la fila de Depuracion no existe en release. */
     private val isDebugBuild by lazy { applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0 }
     private var debugRefresh by mutableStateOf(0)
+
+    /** Sube al restablecer los topes de fabrica: fuerza a los campos de texto de Presupuesto a releer el valor. */
+    private var budgetResetGeneration by mutableStateOf(0)
 
     /** Peticion de seccion desde el menu de la burbuja; la pantalla la aplica y la olvida. */
     private var section by mutableStateOf<AppSection?>(null)
@@ -122,6 +132,44 @@ class MainActivity : ComponentActivity() {
                                 ),
                             )
                         }
+                        val budgetSettings by container.budgetSettings.settings.collectAsState(initial = BudgetSettings())
+                        val budgetDefaults = container.budgetDefaults
+                        val budget = remember(scope, budgetSettings, budgetDefaults, budgetResetGeneration) {
+                            val repo = container.budgetSettings
+                            BudgetUi(
+                                depths = Depth.entries.map { depth ->
+                                    val depthBudget = budgetSettings.depthBudget(depth, budgetDefaults)
+                                    BudgetDepthRow(depth, depthBudget.costLimit.toUsd(), depthBudget.maxPaidCalls)
+                                },
+                                tools = ToolId.entries.map { tool ->
+                                    BudgetToolRow(tool, budgetSettings.toolLimit(tool, budgetDefaults).toUsd())
+                                },
+                                globalLimitUsd = budgetSettings.effectiveGlobalLimit(budgetDefaults).toUsd(),
+                                globalPeriod = budgetSettings.globalPeriod,
+                                resetGeneration = budgetResetGeneration,
+                                onDepthCostChange = { depth, usd ->
+                                    scope.launch {
+                                        val current = budgetSettings.depthBudget(depth, budgetDefaults)
+                                        repo.setDepthBudget(depth, current.copy(costLimit = CostMicros.ofUsd(usd)))
+                                    }
+                                },
+                                onDepthCallsChange = { depth, calls ->
+                                    scope.launch {
+                                        val current = budgetSettings.depthBudget(depth, budgetDefaults)
+                                        repo.setDepthBudget(depth, current.copy(maxPaidCalls = calls))
+                                    }
+                                },
+                                onToolLimitChange = { tool, usd -> scope.launch { repo.setToolLimit(tool, CostMicros.ofUsd(usd)) } },
+                                onGlobalLimitChange = { usd -> scope.launch { repo.setGlobalLimit(CostMicros.ofUsd(usd)) } },
+                                onGlobalPeriodChange = { period -> scope.launch { repo.setGlobalPeriod(period) } },
+                                onReset = {
+                                    scope.launch {
+                                        repo.resetToDefaults()
+                                        budgetResetGeneration++
+                                    }
+                                },
+                            )
+                        }
                         AppScreen(
                             requestedSection = section,
                             onRequestConsumed = { section = null },
@@ -134,6 +182,7 @@ class MainActivity : ComponentActivity() {
                             currentLanguage = language,
                             onSelectLanguage = container.language::set,
                             privacy = privacy,
+                            budget = budget,
                             accessibility = AccessibilityUi(
                                 isEnabled = accessibilityEnabled,
                                 onOpenSettings = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },

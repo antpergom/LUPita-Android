@@ -23,6 +23,8 @@
 
     <string name="settings_privacy">Privacy</string>
     <string name="privacy_row_desc">Which apps are read, security measures and exceptions</string>
+    <string name="settings_budget">Budget</string>
+    <string name="budget_row_desc">Cost and call caps, by depth, tool and period</string>
     <string name="accessibility_row_title">Accessibility</string>
     <string name="accessibility_row_desc">What LUPita reads and how to turn it on</string>
     <string name="accessibility_title">Accessibility</string>
@@ -57,6 +59,26 @@
     <string name="privacy_unknown_hint">Those that are in no list. Recommended: Sensitive.</string>
 
     <string name="privacy_measures_title">Security measures</string>
+
+    <string name="budget_title">Budget</string>
+    <string name="budget_intro">The three hard caps: by depth, by tool and global. No paid call ever goes over them.</string>
+    <string name="budget_depths_title">By depth</string>
+    <string name="budget_depth_cost">Max cost (USD)</string>
+    <string name="budget_depth_calls">Max paid calls</string>
+    <string name="budget_tools_title">By tool</string>
+    <string name="budget_tool_general">General analysis (USD)</string>
+    <string name="budget_tool_verify">Fact checking (USD)</string>
+    <string name="budget_tool_ai_detect">AI detection (USD)</string>
+    <string name="budget_tool_entity">Entity research (USD)</string>
+    <string name="budget_global_title">Global</string>
+    <string name="budget_global_hint">Resets at the start of every period.</string>
+    <string name="budget_global_limit">Global cap (USD)</string>
+    <string name="budget_period_daily">Daily</string>
+    <string name="budget_period_monthly">Monthly</string>
+    <string name="budget_reset">Reset to factory values</string>
+    <string name="depth_low">Low</string>
+    <string name="depth_medium">Medium</string>
+    <string name="depth_high">High</string>
 
     <string name="debug_row_title">Debug</string>
     <string name="debug_row_desc">Development builds only: what was captured and the fixture recorder</string>

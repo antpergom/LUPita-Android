@@ -42,6 +42,7 @@ fun SettingsScreen(
     currentLanguage: String,
     onSelectLanguage: (String) -> Unit,
     onOpenPrivacy: () -> Unit,
+    onOpenBudget: () -> Unit,
     onOpenAccessibility: () -> Unit,
     /** `null` si no procede mostrarla (solo builds `debuggable`; ver `MainActivity`). */
     onOpenDebug: (() -> Unit)?,
@@ -73,6 +74,12 @@ fun SettingsScreen(
             title = stringResource(R.string.privacy_title),
             description = stringResource(R.string.privacy_row_desc),
             onClick = onOpenPrivacy,
+        )
+        Spacer(Modifier.height(8.dp))
+        NavRow(
+            title = stringResource(R.string.settings_budget),
+            description = stringResource(R.string.budget_row_desc),
+            onClick = onOpenBudget,
         )
         Spacer(Modifier.height(8.dp))
         NavRow(

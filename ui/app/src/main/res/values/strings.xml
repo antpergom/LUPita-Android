@@ -23,6 +23,8 @@
 
     <string name="settings_privacy">Privacidad</string>
     <string name="privacy_row_desc">Qué apps se leen, medidas de seguridad y excepciones</string>
+    <string name="settings_budget">Presupuesto</string>
+    <string name="budget_row_desc">Topes de coste y de llamadas, por profundidad, herramienta y periodo</string>
     <string name="accessibility_row_title">Accesibilidad</string>
     <string name="accessibility_row_desc">Qué lee LUPita y cómo activarlo</string>
     <string name="accessibility_title">Accesibilidad</string>
@@ -57,6 +59,26 @@
     <string name="privacy_unknown_hint">Las que no están en ninguna lista. Recomendado: Sensible.</string>
 
     <string name="privacy_measures_title">Medidas de seguridad</string>
+
+    <string name="budget_title">Presupuesto</string>
+    <string name="budget_intro">Los tres topes duros: por profundidad, por herramienta y global. Ninguna llamada de pago los supera.</string>
+    <string name="budget_depths_title">Por profundidad</string>
+    <string name="budget_depth_cost">Coste máximo (USD)</string>
+    <string name="budget_depth_calls">Llamadas de pago máximas</string>
+    <string name="budget_tools_title">Por herramienta</string>
+    <string name="budget_tool_general">Análisis general (USD)</string>
+    <string name="budget_tool_verify">Verificación de hechos (USD)</string>
+    <string name="budget_tool_ai_detect">Detección de IA (USD)</string>
+    <string name="budget_tool_entity">Investigación de entidades (USD)</string>
+    <string name="budget_global_title">Global</string>
+    <string name="budget_global_hint">Se reinicia al empezar cada periodo.</string>
+    <string name="budget_global_limit">Tope global (USD)</string>
+    <string name="budget_period_daily">Diario</string>
+    <string name="budget_period_monthly">Mensual</string>
+    <string name="budget_reset">Restablecer valores de fábrica</string>
+    <string name="depth_low">Baja</string>
+    <string name="depth_medium">Media</string>
+    <string name="depth_high">Alta</string>
 
     <string name="debug_row_title">Depuración</string>
     <string name="debug_row_desc">Solo builds de desarrollo: lo capturado y el grabador de fixtures</string>
