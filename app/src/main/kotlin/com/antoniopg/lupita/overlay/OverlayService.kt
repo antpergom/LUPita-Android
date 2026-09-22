@@ -123,7 +123,15 @@ class OverlayService : Service() {
         val outcome = withContext(Dispatchers.Default) {
             CapturePipeline(source, container.privacyGate).run(rect, settings)
         }
-        toast(summarize(outcome, SystemClock.elapsedRealtime() - started, settleMs, settings.imageSavePolicy))
+        toast(
+            summarize(
+                outcome,
+                SystemClock.elapsedRealtime() - started,
+                settleMs,
+                settings.imageSavePolicy,
+                settings.fixtureRecorderEnabled,
+            ),
+        )
     }
 
     /** Quita la burbuja y cierra la app: la X de abajo y el boton del panel. */
@@ -139,6 +147,7 @@ class OverlayService : Service() {
         ms: Long,
         settleMs: Long,
         savePolicy: ImageSavePolicy,
+        recorderEnabled: Boolean,
     ): String = when (outcome) {
         is CapturePipeline.Outcome.Failed ->
             getString(R.string.capture_failed, outcome.reason.name, outcome.detail ?: "-")
@@ -154,7 +163,7 @@ class OverlayService : Service() {
                     withContext(Dispatchers.Default) { RegionImage.encode(it, content.provenance, settleMs) }
                 }
                 // Protegidas nunca llegan aqui (content == null arriba): la politica solo se aplica a lo leido.
-                if (encoded != null) handleSave(bundle, encoded, savePolicy.effective(bundle.header.tier))
+                if (encoded != null && recorderEnabled) handleSave(bundle, encoded, savePolicy.effective(bundle.header.tier))
                 getString(
                     R.string.capture_read,
                     bundle.header.tier.name,
@@ -182,9 +191,9 @@ class OverlayService : Service() {
     }
 
     /**
-     * SOLO en builds de depuracion (y nunca con una app protegida: no habria contenido): deja la imagen y un
-     * volcado del arbol en el almacenamiento privado, para medir tamanos y comprobar el filtrado por `adb`.
-     * Es el germen del grabador de fixtures (F1.5); no se sube ni se versiona.
+     * SOLO en builds de depuracion, con el grabador de fixtures activado (F1.5, desactivado por defecto) y
+     * nunca con una app protegida (no habria contenido): deja la imagen y un volcado del arbol en el
+     * almacenamiento privado. No se sube ni se versiona.
      */
     private fun debugSave(bundle: ContextBundle, encoded: EncodedImage) {
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) return

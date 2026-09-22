@@ -43,6 +43,8 @@ fun SettingsScreen(
     onSelectLanguage: (String) -> Unit,
     onOpenPrivacy: () -> Unit,
     onOpenAccessibility: () -> Unit,
+    /** `null` si no procede mostrarla (solo builds `debuggable`; ver `MainActivity`). */
+    onOpenDebug: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val c = Lupita.colors
@@ -78,6 +80,14 @@ fun SettingsScreen(
             description = stringResource(R.string.accessibility_row_desc),
             onClick = onOpenAccessibility,
         )
+        if (onOpenDebug != null) {
+            Spacer(Modifier.height(8.dp))
+            NavRow(
+                title = stringResource(R.string.debug_row_title),
+                description = stringResource(R.string.debug_row_desc),
+                onClick = onOpenDebug,
+            )
+        }
         Spacer(Modifier.height(20.dp))
 
         SectionLabel(stringResource(R.string.settings_model))

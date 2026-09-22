@@ -89,6 +89,15 @@ class DataStorePrivacySettingsRepositoryTest {
     }
 
     @Test
+    fun `the fixture recorder defaults to off and is remembered`() = runTest {
+        assertFalse(repo.settings.first().fixtureRecorderEnabled)
+
+        repo.setFixtureRecorderEnabled(true)
+
+        assertTrue(repo.settings.first().fixtureRecorderEnabled)
+    }
+
+    @Test
     fun `a group level can be overridden and reset`() = runTest {
         repo.setGroupTier("social", PrivacyTier.SENSITIVE)
         repo.setGroupTier("banking", PrivacyTier.NORMAL)

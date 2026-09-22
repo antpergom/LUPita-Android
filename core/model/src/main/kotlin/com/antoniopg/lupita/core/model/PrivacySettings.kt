@@ -73,6 +73,11 @@ data class PrivacySettings(
     val userRules: List<UserRule> = emptyList(),
     /** Si se guarda la imagen enviada (decision 2026-09-22): siempre por defecto. Ver [ImageSavePolicy]. */
     val imageSavePolicy: ImageSavePolicy = ImageSavePolicy.DEFAULT,
+    /**
+     * Grabador de fixtures (F1.5): desactivado por defecto. Solo tiene efecto en builds de depuracion y
+     * nunca con apps protegidas (`content == null` antes de llegar aqui); ver docs/SEGURIDAD.md.
+     */
+    val fixtureRecorderEnabled: Boolean = false,
 ) {
     fun isEnabled(measure: SecurityMeasure): Boolean = measures[measure] ?: measure.defaultEnabled
 }
@@ -96,4 +101,6 @@ interface PrivacySettingsRepository {
     suspend fun removeUserRule(match: AppMatch)
 
     suspend fun setImageSavePolicy(policy: ImageSavePolicy)
+
+    suspend fun setFixtureRecorderEnabled(enabled: Boolean)
 }

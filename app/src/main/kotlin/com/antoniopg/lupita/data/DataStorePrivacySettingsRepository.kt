@@ -43,6 +43,7 @@ class DataStorePrivacySettingsRepository(
                 enabledRegions = prefs[REGIONS] ?: defaultRegions,
                 userRules = prefs[USER_RULES].orEmpty().mapNotNull(UserRule::decode).sortedBy { it.encode() },
                 imageSavePolicy = ImageSavePolicy.fromKey(prefs[IMAGE_SAVE_POLICY]) ?: ImageSavePolicy.DEFAULT,
+                fixtureRecorderEnabled = prefs[FIXTURE_RECORDER] ?: false,
             )
         }
 
@@ -80,6 +81,10 @@ class DataStorePrivacySettingsRepository(
         dataStore.edit { it[IMAGE_SAVE_POLICY] = policy.key }
     }
 
+    override suspend fun setFixtureRecorderEnabled(enabled: Boolean) {
+        dataStore.edit { it[FIXTURE_RECORDER] = enabled }
+    }
+
     private fun writeRules(prefs: MutablePreferences, change: (List<UserRule>) -> List<UserRule>) {
         val current = prefs[USER_RULES].orEmpty().mapNotNull(UserRule::decode)
         prefs[USER_RULES] = change(current).map { it.encode() }.toSet()
@@ -99,5 +104,6 @@ class DataStorePrivacySettingsRepository(
         val REGIONS = stringSetPreferencesKey("privacy_regions")
         val USER_RULES = stringSetPreferencesKey("privacy_user_rules")
         val IMAGE_SAVE_POLICY = stringPreferencesKey("privacy_image_save_policy")
+        val FIXTURE_RECORDER = booleanPreferencesKey("privacy_fixture_recorder")
     }
 }

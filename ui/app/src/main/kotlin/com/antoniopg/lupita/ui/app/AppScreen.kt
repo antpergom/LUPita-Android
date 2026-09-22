@@ -24,6 +24,8 @@ import com.antoniopg.lupita.core.model.ModelOption
 import com.antoniopg.lupita.ui.app.history.HistoryScreen
 import com.antoniopg.lupita.ui.app.accessibility.AccessibilityDisclosureScreen
 import com.antoniopg.lupita.ui.app.accessibility.AccessibilityUi
+import com.antoniopg.lupita.ui.app.debug.DebugScreen
+import com.antoniopg.lupita.ui.app.debug.DebugUi
 import com.antoniopg.lupita.ui.app.privacy.PrivacyScreen
 import com.antoniopg.lupita.ui.app.privacy.PrivacyUi
 import com.antoniopg.lupita.ui.app.settings.SettingsScreen
@@ -51,17 +53,21 @@ fun AppScreen(
     onSelectLanguage: (String) -> Unit,
     privacy: PrivacyUi,
     accessibility: AccessibilityUi,
+    /** `null` si no procede mostrarla (solo builds `debuggable`). */
+    debug: DebugUi?,
     modifier: Modifier = Modifier,
 ) {
     val c = Lupita.colors
     var sectionKey by rememberSaveable { mutableStateOf((requestedSection ?: AppSection.SETTINGS).key) }
     var showPrivacy by rememberSaveable { mutableStateOf(false) }
     var showAccessibility by rememberSaveable { mutableStateOf(false) }
+    var showDebug by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(requestedSection) {
         if (requestedSection != null) {
             sectionKey = requestedSection.key
             showPrivacy = false
             showAccessibility = false
+            showDebug = false
             onRequestConsumed()
         }
     }
@@ -85,6 +91,7 @@ fun AppScreen(
                         sectionKey = AppSection.SETTINGS.key
                         showPrivacy = false
                         showAccessibility = false
+                        showDebug = false
                     },
                     icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                     label = { Text(stringResource(R.string.section_settings)) },
@@ -96,6 +103,7 @@ fun AppScreen(
                         sectionKey = AppSection.HISTORY.key
                         showPrivacy = false
                         showAccessibility = false
+                        showDebug = false
                     },
                     icon = { Icon(Icons.Rounded.History, contentDescription = null) },
                     label = { Text(stringResource(R.string.section_history)) },
@@ -111,6 +119,11 @@ fun AppScreen(
                 onBack = { showAccessibility = false },
                 modifier = Modifier.padding(padding),
             )
+            showDebug && debug != null -> DebugScreen(
+                ui = debug,
+                onBack = { showDebug = false },
+                modifier = Modifier.padding(padding),
+            )
             showPrivacy -> PrivacyScreen(ui = privacy, onBack = { showPrivacy = false }, modifier = Modifier.padding(padding))
             else -> SettingsScreen(
                 appName = appName,
@@ -123,6 +136,7 @@ fun AppScreen(
                 onSelectLanguage = onSelectLanguage,
                 onOpenPrivacy = { showPrivacy = true },
                 onOpenAccessibility = { showAccessibility = true },
+                onOpenDebug = debug?.let { { showDebug = true } },
                 modifier = Modifier.padding(padding),
             )
         }

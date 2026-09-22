@@ -58,6 +58,15 @@
 
     <string name="privacy_measures_title">Medidas de seguridad</string>
 
+    <string name="debug_row_title">Depuración</string>
+    <string name="debug_row_desc">Solo builds de desarrollo: lo capturado y el grabador de fixtures</string>
+    <string name="debug_title">Depuración</string>
+    <string name="debug_recorder_title">Grabador de fixtures</string>
+    <string name="debug_recorder_desc">Desactivado por defecto. Nunca escribe nada de una app protegida.</string>
+    <string name="debug_captures_title">Capturas guardadas</string>
+    <string name="debug_captures_empty">No hay ninguna.</string>
+    <string name="debug_clear_all">Borrar todo</string>
+
     <string name="save_policy_title">Guardar la imagen enviada</string>
     <string name="save_policy_hint">En apps sensibles se pregunta siempre, aunque elijas «siempre».</string>
     <string name="save_policy_always">Siempre</string>

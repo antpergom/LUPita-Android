@@ -58,6 +58,15 @@
 
     <string name="privacy_measures_title">Security measures</string>
 
+    <string name="debug_row_title">Debug</string>
+    <string name="debug_row_desc">Development builds only: what was captured and the fixture recorder</string>
+    <string name="debug_title">Debug</string>
+    <string name="debug_recorder_title">Fixture recorder</string>
+    <string name="debug_recorder_desc">Off by default. Never writes anything from a protected app.</string>
+    <string name="debug_captures_title">Saved captures</string>
+    <string name="debug_captures_empty">None yet.</string>
+    <string name="debug_clear_all">Clear all</string>
+
     <string name="save_policy_title">Save the image that gets sent</string>
     <string name="save_policy_hint">Sensitive apps always ask, even if you pick «always».</string>
     <string name="save_policy_always">Always</string>

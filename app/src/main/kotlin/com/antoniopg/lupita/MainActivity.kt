@@ -3,6 +3,7 @@ package com.antoniopg.lupita
 import android.Manifest
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -30,6 +31,7 @@ import com.antoniopg.lupita.core.model.RequiredPermission
 import com.antoniopg.lupita.overlay.OverlayService
 import com.antoniopg.lupita.ui.app.AppScreen
 import com.antoniopg.lupita.ui.app.accessibility.AccessibilityUi
+import com.antoniopg.lupita.ui.app.debug.DebugUi
 import com.antoniopg.lupita.ui.app.privacy.PrivacyActions
 import com.antoniopg.lupita.ui.app.privacy.PrivacyUi
 import com.antoniopg.lupita.ui.app.onboarding.OnboardingScreen
@@ -44,6 +46,10 @@ class MainActivity : ComponentActivity() {
 
     private var permissions by mutableStateOf(PermissionState(overlay = false, notifications = false))
     private var accessibilityEnabled by mutableStateOf(false)
+
+    /** Solo builds de desarrollo (`debuggable`): la fila de Depuracion no existe en release. */
+    private val isDebugBuild by lazy { applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0 }
+    private var debugRefresh by mutableStateOf(0)
 
     /** Peticion de seccion desde el menu de la burbuja; la pantalla la aplica y la olvida. */
     private var section by mutableStateOf<AppSection?>(null)
@@ -118,10 +124,21 @@ class MainActivity : ComponentActivity() {
                             currentLanguage = language,
                             onSelectLanguage = container.language::set,
                             privacy = privacy,
-                accessibility = AccessibilityUi(
-                    isEnabled = accessibilityEnabled,
-                    onOpenSettings = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
-                ),
+                            accessibility = AccessibilityUi(
+                                isEnabled = accessibilityEnabled,
+                                onOpenSettings = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
+                            ),
+                            debug = if (isDebugBuild) {
+                                val captures = remember(debugRefresh) { listDebugCaptures(applicationContext) }
+                                DebugUi(
+                                    recorderEnabled = privacySettings.fixtureRecorderEnabled,
+                                    onRecorderEnabled = { scope.launch { container.privacySettings.setFixtureRecorderEnabled(it) } },
+                                    captures = captures,
+                                    onClearAll = { clearDebugCaptures(applicationContext); debugRefresh++ },
+                                )
+                            } else {
+                                null
+                            },
                         )
                     } else {
                         OnboardingScreen(missing = missing, onRequest = ::request)
