@@ -1,6 +1,6 @@
 {
   "depths": [
-    { "depth": "low", "costLimitUsd": 0.02, "maxPaidCalls": 2 },
+    { "depth": "low", "costLimitUsd": 0.02, "maxPaidCalls": 4 },
     { "depth": "medium", "costLimitUsd": 0.10, "maxPaidCalls": 6 },
     { "depth": "high", "costLimitUsd": 0.50, "maxPaidCalls": 20 }
   ],

@@ -39,10 +39,16 @@ data class BudgetDefaults(
          * Cifras de partida, deliberadamente sin afinar («alto por el momento», decision 2026-09-22): sirven
          * para no bloquear nada mientras no hay ninguna llamada de pago todavia (F5). Ajustar cuando haya
          * datos reales de gasto.
+         *
+         * `maxPaidCalls` de las 3 profundidades cubre siempre las 4 herramientas (decision 2026-09-25: las
+         * tres profundidades deben poder llamar a las 4 tarjetas — el limite real llegara mas adelante
+         * sobre el contexto u otros parametros, no sobre un tope de llamadas mas bajo que el numero de
+         * herramientas). Verificado en el Pixel el 2026-09-25 que con `maxPaidCalls = 2` en LOW, la 3a y 4a
+         * herramienta de una misma captura se denegaban SIEMPRE, no solo en el caso raro de gasto alto.
          */
         val FALLBACK = BudgetDefaults(
             depths = mapOf(
-                Depth.LOW to DepthBudget(CostMicros.ofUsd(0.02), maxPaidCalls = 2),
+                Depth.LOW to DepthBudget(CostMicros.ofUsd(0.02), maxPaidCalls = ToolId.entries.size),
                 Depth.MEDIUM to DepthBudget(CostMicros.ofUsd(0.10), maxPaidCalls = 6),
                 Depth.HIGH to DepthBudget(CostMicros.ofUsd(0.50), maxPaidCalls = 20),
             ),
