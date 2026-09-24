@@ -21,4 +21,15 @@
     <string name="projection_notification_text">LUPita está leyendo la zona que eliges. Páralo cuando termines.</string>
     <string name="projection_stop">Parar</string>
     <string name="projection_denied">Sin permiso de captura: no se ha leído nada</string>
+
+    <!-- F5: resultado de "Análisis general" -->
+    <string name="analysis_result">IA: %1$s (coste: %2$s USD)</string>
+    <string name="analysis_no_model">IA: no hay ningún modelo configurado</string>
+    <string name="analysis_no_api_key">IA: no hay ninguna clave de API guardada (Ajustes → Proveedor de IA)</string>
+    <string name="analysis_no_pricing">IA: el modelo elegido no tiene precio configurado, no se ha llamado</string>
+    <string name="analysis_failed">IA: fallo — %1$s</string>
+    <string name="analysis_denied_depth_cost">IA: tope de coste de esta profundidad alcanzado</string>
+    <string name="analysis_denied_depth_calls">IA: tope de llamadas de esta profundidad alcanzado</string>
+    <string name="analysis_denied_tool_cost">IA: tope de coste de Análisis general alcanzado</string>
+    <string name="analysis_denied_global_cost">IA: tope de coste global alcanzado</string>
 </resources>

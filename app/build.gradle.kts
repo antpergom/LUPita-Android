@@ -56,6 +56,7 @@ ksp {
 dependencies {
     implementation(project(":core:model"))
     implementation(project(":orchestrator"))
+    implementation(project(":source:openai"))
     implementation(project(":capability:privacy"))
     implementation(project(":capability:screen"))
     implementation(project(":capability:context"))

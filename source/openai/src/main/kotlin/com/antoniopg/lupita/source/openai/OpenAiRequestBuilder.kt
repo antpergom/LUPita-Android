@@ -39,6 +39,7 @@ object OpenAiRequestBuilder {
                 "reasoning",
                 buildJsonObject { put("effort", reasoningEffort(request.depth)) },
             )
+            put("max_output_tokens", maxOutputTokens(request.depth))
         }
 
     private fun textPart(text: String) = buildJsonObject {
@@ -56,5 +57,16 @@ object OpenAiRequestBuilder {
         Depth.LOW -> "low"
         Depth.MEDIUM -> "medium"
         Depth.HIGH -> "high"
+    }
+
+    /**
+     * Tope de tokens de salida por profundidad — acota el coste maximo posible de una llamada (lo
+     * usa tambien [OpenAiCost.worstCaseEstimate], misma fuente de verdad) y mantiene la respuesta
+     * "breve" que pide [GeneralAnalysisPromptV1] incluso en profundidad alta.
+     */
+    fun maxOutputTokens(depth: Depth): Int = when (depth) {
+        Depth.LOW -> 400
+        Depth.MEDIUM -> 800
+        Depth.HIGH -> 1500
     }
 }

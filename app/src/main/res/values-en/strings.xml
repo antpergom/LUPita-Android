@@ -21,4 +21,15 @@
     <string name="projection_notification_text">LUPita is reading the area you choose. Stop it when you are done.</string>
     <string name="projection_stop">Stop</string>
     <string name="projection_denied">No capture permission: nothing was read</string>
+
+    <!-- F5: "General analysis" result -->
+    <string name="analysis_result">AI: %1$s (cost: %2$s USD)</string>
+    <string name="analysis_no_model">AI: no model configured</string>
+    <string name="analysis_no_api_key">AI: no API key saved (Settings → AI provider)</string>
+    <string name="analysis_no_pricing">AI: the chosen model has no price configured, no call was made</string>
+    <string name="analysis_failed">AI: failed — %1$s</string>
+    <string name="analysis_denied_depth_cost">AI: this depth\'s cost cap was reached</string>
+    <string name="analysis_denied_depth_calls">AI: this depth\'s call cap was reached</string>
+    <string name="analysis_denied_tool_cost">AI: General analysis\' cost cap was reached</string>
+    <string name="analysis_denied_global_cost">AI: the global cost cap was reached</string>
 </resources>

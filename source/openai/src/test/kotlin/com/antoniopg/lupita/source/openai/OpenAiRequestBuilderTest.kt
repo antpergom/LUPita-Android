@@ -72,4 +72,15 @@ class OpenAiRequestBuilderTest {
         val systemContent = body["input"]!!.jsonArray[0].jsonObject["content"]!!.jsonArray
         assertEquals("prompt a medida", systemContent[0].jsonObject["text"]?.jsonPrimitive?.content)
     }
+
+    @Test
+    fun `max_output_tokens grows with depth and matches maxOutputTokens()`() {
+        Depth.entries.forEach { depth ->
+            val body = OpenAiRequestBuilder.build(AnalysisRequest("t", depth = depth), "m")
+            assertEquals(
+                OpenAiRequestBuilder.maxOutputTokens(depth),
+                body["max_output_tokens"]?.jsonPrimitive?.content?.toInt(),
+            )
+        }
+    }
 }

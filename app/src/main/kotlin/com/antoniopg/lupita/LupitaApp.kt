@@ -17,6 +17,10 @@ import com.antoniopg.lupita.core.model.PrivacyCatalog
 import com.antoniopg.lupita.core.model.PrivacyRegions
 import com.antoniopg.lupita.core.model.PrivacySettingsRepository
 import com.antoniopg.lupita.core.model.SettingsRepository
+import com.antoniopg.lupita.orchestrator.GeneralAnalysisRunner
+import com.antoniopg.lupita.orchestrator.ResourceQueues
+import com.antoniopg.lupita.source.openai.HttpOpenAiClient
+import com.antoniopg.lupita.source.openai.OpenAiClient
 import com.antoniopg.lupita.data.DataStoreBudgetSettingsRepository
 import com.antoniopg.lupita.data.DataStorePrivacySettingsRepository
 import com.antoniopg.lupita.data.DataStoreSettingsRepository
@@ -103,6 +107,20 @@ class AppContainer(private val context: Context) {
     /** Clave de API del proveedor de IA (F5 paso 1), cifrada — nunca la misma preferencia sin cifrar. */
     val aiCredentials: AiCredentialsRepository by lazy {
         TinkAiCredentialsRepository(credentialsDataStore, AeadFieldCodec(credentialsAead))
+    }
+
+    /** El unico cliente que toca la red de OpenAI de verdad (F5 paso 2). */
+    private val openAiClient: OpenAiClient by lazy { HttpOpenAiClient() }
+
+    /** Colas por clase de recurso (F4 paso 2) — una instancia para toda la app, no una por llamada. */
+    private val resourceQueues: ResourceQueues by lazy { ResourceQueues() }
+
+    /**
+     * Primer consumidor real de F4 (F5 paso 3): presupuesto + colas + log de coste alrededor de
+     * "Analisis general". Ver `orchestrator/GeneralAnalysisRunner.kt`.
+     */
+    val generalAnalysisRunner: GeneralAnalysisRunner by lazy {
+        GeneralAnalysisRunner(aiCredentials, budgetSettings, budgetDefaults, costLog, resourceQueues, openAiClient)
     }
 
     private fun readAsset(name: String): String = context.assets.open(name).bufferedReader().use { it.readText() }

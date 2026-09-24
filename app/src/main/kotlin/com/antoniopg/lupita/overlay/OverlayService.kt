@@ -30,9 +30,12 @@ import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.ArtifactHash
 import com.antoniopg.lupita.core.model.AuditEntry
 import com.antoniopg.lupita.core.model.AuditOutcome
+import com.antoniopg.lupita.core.model.BubbleSettings
 import com.antoniopg.lupita.core.model.ContentPattern
 import com.antoniopg.lupita.core.model.ContextBundle
 import com.antoniopg.lupita.core.model.ContextHeader
+import com.antoniopg.lupita.core.model.Depth
+import com.antoniopg.lupita.core.model.ModelCatalog
 import com.antoniopg.lupita.core.model.PendingSuggestion
 import com.antoniopg.lupita.core.model.PrivacySettings
 import com.antoniopg.lupita.core.model.EncodedImage
@@ -40,6 +43,9 @@ import com.antoniopg.lupita.core.model.ImageSavePolicy
 import com.antoniopg.lupita.core.model.SecurityMeasure
 import com.antoniopg.lupita.core.model.ScreenSource
 import com.antoniopg.lupita.core.model.SelectionRect
+import com.antoniopg.lupita.core.model.ToolId
+import com.antoniopg.lupita.orchestrator.DenyReason
+import com.antoniopg.lupita.orchestrator.GeneralAnalysisRunner
 import com.antoniopg.lupita.ui.overlay.AskSaveOverlay
 import com.antoniopg.lupita.ui.overlay.BubbleOverlay
 import java.io.File
@@ -128,6 +134,8 @@ class OverlayService : Service() {
     private suspend fun runCapture(source: ScreenSource, rect: SelectionRect, settleMs: Long) {
         val container = (application as LupitaApp).container
         val settings = container.privacySettings.settings.first()
+        val bubble = container.settings.settings.first()
+        val modelId = container.settings.modelId.first()
         val started = SystemClock.elapsedRealtime()
         val outcome = withContext(Dispatchers.Default) {
             CapturePipeline(source, container.privacyGate).run(rect, settings)
@@ -140,14 +148,17 @@ class OverlayService : Service() {
             settings.imageSavePolicy,
             settings.fixtureRecorderEnabled,
             settings.isEnabled(SecurityMeasure.AUDIT_LOG),
+            bubble,
+            modelId,
         )
-        // Dos toasts, no un `\n`: en el Pixel un solo texto de dos lineas se queda corto, la primera
+        // Varios toasts, no un `\n`: en el Pixel un solo texto de dos lineas se queda corto, la primera
         // linea ya llena el hueco visible y la segunda nunca llega a verse (hallado verificando F2/F3).
         toast(summary.message)
         summary.normalized?.let { delay(TOAST_GAP_MS); toast(it) }
+        summary.analysis?.let { delay(TOAST_GAP_MS); toast(it) }
     }
 
-    private class Summary(val message: String, val normalized: String? = null)
+    private class Summary(val message: String, val normalized: String? = null, val analysis: String? = null)
 
     /** La propuesta por nombre (si la hay) se registra siempre: no depende de la medida de auditoria. */
     private suspend fun recordSuggestion(outcome: CapturePipeline.Outcome) {
@@ -171,6 +182,35 @@ class OverlayService : Service() {
         )
     }
 
+    /**
+     * F5 paso 3: primer consumidor real de F4 (BudgetEnforcer/ResourceQueues/CostLogRepository).
+     * Nunca lanza — cada desenlace de [GeneralAnalysisRunner.Outcome] tiene su propio mensaje.
+     */
+    private suspend fun runGeneralAnalysis(text: String, depth: Depth, modelId: String?): String {
+        val container = (application as LupitaApp).container
+        val effectiveId = ModelCatalog.effectiveSelection(container.modelCatalog, modelId)
+        val model = container.modelCatalog.firstOrNull { it.id == effectiveId }
+            ?: return getString(R.string.analysis_no_model)
+
+        return when (val outcome = container.generalAnalysisRunner.run(text, depth, model)) {
+            is GeneralAnalysisRunner.Outcome.Success ->
+                getString(R.string.analysis_result, outcome.text, "%.4f".format(java.util.Locale.US, outcome.cost.toUsd()))
+            is GeneralAnalysisRunner.Outcome.Denied -> denyReasonText(outcome.reason)
+            is GeneralAnalysisRunner.Outcome.Failed -> getString(R.string.analysis_failed, outcome.reason)
+            GeneralAnalysisRunner.Outcome.NoApiKey -> getString(R.string.analysis_no_api_key)
+            GeneralAnalysisRunner.Outcome.NoPricing -> getString(R.string.analysis_no_pricing)
+        }
+    }
+
+    private fun denyReasonText(reason: DenyReason): String = getString(
+        when (reason) {
+            DenyReason.DEPTH_COST -> R.string.analysis_denied_depth_cost
+            DenyReason.DEPTH_CALLS -> R.string.analysis_denied_depth_calls
+            DenyReason.TOOL_COST -> R.string.analysis_denied_tool_cost
+            DenyReason.GLOBAL_COST -> R.string.analysis_denied_global_cost
+        },
+    )
+
     /** Quita la burbuja y cierra la app: la X de abajo y el boton del panel. */
     private fun quit() {
         ProjectionSession.stop()
@@ -186,6 +226,8 @@ class OverlayService : Service() {
         savePolicy: ImageSavePolicy,
         recorderEnabled: Boolean,
         auditEnabled: Boolean,
+        bubble: BubbleSettings,
+        modelId: String?,
     ): Summary = when (outcome) {
         is CapturePipeline.Outcome.Failed ->
             Summary(getString(R.string.capture_failed, outcome.reason.name, outcome.detail ?: "-"))
@@ -208,6 +250,12 @@ class OverlayService : Service() {
                 // F2: normalizacion determinista (filtrado, orden de lectura, roles) + artefacto por hash del texto.
                 val normalized = ContextNormalizer.normalize(content.nodes)
                 val textArtifact = ArtifactHash.of(normalized.plainText)
+                // F5 paso 3: primer consumidor real de F4 - solo si "Analisis general" esta activa en la burbuja.
+                val analysis = if (ToolId.GENERAL in bubble.enabledTools) {
+                    runGeneralAnalysis(normalized.plainText, bubble.depth, modelId)
+                } else {
+                    null
+                }
                 Summary(
                     message = getString(
                         R.string.capture_read,
@@ -226,6 +274,7 @@ class OverlayService : Service() {
                         ),
                         textArtifact.hex.take(8),
                     ),
+                    analysis = analysis,
                 )
             }
         }
