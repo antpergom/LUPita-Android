@@ -138,11 +138,19 @@ class OverlayService : Service() {
     private suspend fun runCapture(source: ScreenSource, rect: SelectionRect, settleMs: Long) {
         val container = (application as LupitaApp).container
         val settings = container.privacySettings.settings.first()
-        val bubble = container.settings.settings.first()
+        val bubbleSettings = container.settings.settings.first()
         val modelId = container.settings.modelId.first()
         val started = SystemClock.elapsedRealtime()
-        val outcome = withContext(Dispatchers.Default) {
-            CapturePipeline(source, container.privacyGate).run(rect, settings)
+        // La burbuja no debe salir en su propia captura (bug real hallado verificando F5/F6 en el
+        // Pixel, 2026-09-25): se oculta solo durante la lectura de pixeles, nunca mientras se
+        // analiza (eso puede tardar varios segundos y dejaria al usuario sin burbuja visible).
+        bubble?.setBubbleVisible(false)
+        val outcome = try {
+            withContext(Dispatchers.Default) {
+                CapturePipeline(source, container.privacyGate).run(rect, settings)
+            }
+        } finally {
+            bubble?.setBubbleVisible(true)
         }
         recordSuggestion(outcome)
         val summary = summarize(
@@ -152,14 +160,14 @@ class OverlayService : Service() {
             settings.imageSavePolicy,
             settings.fixtureRecorderEnabled,
             settings.isEnabled(SecurityMeasure.AUDIT_LOG),
-            bubble,
+            bubbleSettings,
             modelId,
         )
         // Varios toasts, no un `\n`: en el Pixel un solo texto de dos lineas se queda corto, la primera
         // linea ya llena el hueco visible y la segunda nunca llega a verse (hallado verificando F2/F3).
         toast(summary.message)
         summary.normalized?.let { delay(TOAST_GAP_MS); toast(it) }
-        summary.analyses.forEach { delay(TOAST_GAP_MS); toast(it) }
+        notifyAnalyses(summary.analyses)
     }
 
     private class Summary(val message: String, val normalized: String? = null, val analyses: List<String> = emptyList())
@@ -196,7 +204,7 @@ class OverlayService : Service() {
      * esta seleccion entre una herramienta y la siguiente — arquitectura F1: "cuatro burbujas en
      * alta reparten, no multiplican" el presupuesto.
      */
-    private suspend fun runAnalyses(text: String, bubble: BubbleSettings, modelId: String?): List<String> {
+    private suspend fun runAnalyses(text: String, bubbleSettings: BubbleSettings, modelId: String?): List<String> {
         val container = (application as LupitaApp).container
         val effectiveId = ModelCatalog.effectiveSelection(container.modelCatalog, modelId)
         val model = container.modelCatalog.firstOrNull { it.id == effectiveId }
@@ -206,10 +214,10 @@ class OverlayService : Service() {
         var selectionPaidCalls = 0
         val messages = mutableListOf<String>()
         for (tool in ToolId.entries) {
-            if (tool !in bubble.enabledTools) continue
+            if (tool !in bubbleSettings.enabledTools) continue
             val (capabilityId, prompt) = promptFor(tool)
             val outcome = container.analysisRunner.run(
-                tool, capabilityId, prompt, text, bubble.depth, model, selectionSpent, selectionPaidCalls,
+                tool, capabilityId, prompt, text, bubbleSettings.depth, model, selectionSpent, selectionPaidCalls,
             )
             if (outcome is AnalysisRunner.Outcome.Success) {
                 selectionSpent += outcome.cost
@@ -269,7 +277,7 @@ class OverlayService : Service() {
         savePolicy: ImageSavePolicy,
         recorderEnabled: Boolean,
         auditEnabled: Boolean,
-        bubble: BubbleSettings,
+        bubbleSettings: BubbleSettings,
         modelId: String?,
     ): Summary = when (outcome) {
         is CapturePipeline.Outcome.Failed ->
@@ -294,7 +302,7 @@ class OverlayService : Service() {
                 val normalized = ContextNormalizer.normalize(content.nodes)
                 val textArtifact = ArtifactHash.of(normalized.plainText)
                 // F5/F6: una entrada por cada herramienta activa en la burbuja (vacio si ninguna lo esta).
-                val analyses = runAnalyses(normalized.plainText, bubble, modelId)
+                val analyses = runAnalyses(normalized.plainText, bubbleSettings, modelId)
                 Summary(
                     message = getString(
                         R.string.capture_read,
@@ -402,6 +410,31 @@ class OverlayService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
+    /**
+     * Una notificacion por captura con el resultado de cada herramienta activa (una linea cada
+     * una) — sustituye al toast por herramienta, que se topaba con la cuota de toasts de Android
+     * en cuanto habia varias activas a la vez (bug real hallado verificando F5/F6, 2026-09-25).
+     */
+    private fun notifyAnalyses(messages: List<String>) {
+        if (messages.isEmpty()) return
+        val channel = NotificationChannel(
+            ANALYSIS_CHANNEL_ID,
+            getString(R.string.analysis_channel_name),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        )
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(channel)
+        val style = Notification.InboxStyle()
+        messages.forEach { style.addLine(it) }
+        val notification = Notification.Builder(this, ANALYSIS_CHANNEL_ID)
+            .setSmallIcon(Icon.createWithResource(this, R.drawable.ic_notification))
+            .setContentTitle(getString(R.string.analysis_notification_title))
+            .setStyle(style)
+            .setAutoCancel(true)
+            .build()
+        manager.notify(ANALYSIS_NOTIFICATION_ID, notification)
+    }
+
     private fun buildNotification(): Notification {
         val icon = Icon.createWithResource(this, R.drawable.ic_notification)
         val open = PendingIntent.getActivity(
@@ -432,6 +465,12 @@ class OverlayService : Service() {
         const val ACTION_STOP = "com.antoniopg.lupita.action.STOP_OVERLAY"
         private const val CHANNEL_ID = "overlay_service"
         private const val NOTIFICATION_ID = 1
+
+        // F5/F6, bug real (2026-09-25): con varias herramientas activas, Toast.makeText() se topa con
+        // la cuota de toasts de Android y descarta los ultimos en silencio. Los resultados de analisis
+        // van en una notificacion aparte (sin ese limite), una linea por herramienta.
+        private const val ANALYSIS_CHANNEL_ID = "analysis_results"
+        private const val ANALYSIS_NOTIFICATION_ID = 2
 
         /** Solo debe llamarse con la app visible (ver la nota de arranque en segundo plano arriba). */
         fun start(context: Context) {

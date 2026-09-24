@@ -82,6 +82,15 @@ class BubbleOverlay(
 
     private val longPressTimer = Runnable { gesture.onLongPressTimeout()?.let(::handle) }
 
+    /**
+     * Oculta/muestra el icono de la burbuja sin quitar su ventana — usado por `OverlayService`
+     * justo alrededor de la captura de pixeles real, para que la burbuja no salga en su propia
+     * captura (bug real encontrado verificando F5/F6 en el Pixel, 2026-09-25).
+     */
+    fun setBubbleVisible(visible: Boolean) {
+        bubbleWindow?.setVisible(visible)
+    }
+
     fun show() {
         if (bubbleWindow != null || collectJob != null) return
         collectJob = scope.launch {

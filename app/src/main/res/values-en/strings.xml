@@ -3,6 +3,8 @@
     <string name="app_name">LUPita</string>
 
     <string name="notification_channel_name">Active bubble</string>
+    <string name="analysis_channel_name">Analysis result</string>
+    <string name="analysis_notification_title">Analysis finished</string>
     <string name="notification_title">LUPita active</string>
     <string name="notification_text">Tap the bubble to analyze</string>
     <string name="notification_action_stop">Turn off</string>

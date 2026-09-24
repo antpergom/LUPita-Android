@@ -42,6 +42,11 @@ internal class ComposeOverlayWindow(
         if (added) windowManager.updateViewLayout(view, params)
     }
 
+    /** Oculta/muestra sin quitar la ventana del `WindowManager` (evita recrear el estado de Compose). */
+    fun setVisible(visible: Boolean) {
+        view.visibility = if (visible) View.VISIBLE else View.INVISIBLE
+    }
+
     fun remove() {
         if (!added) return
         runCatching { windowManager.removeView(view) }
