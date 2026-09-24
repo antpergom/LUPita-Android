@@ -55,6 +55,8 @@ class BubbleOverlay(
     private val onCapture: (SelectionRect) -> Unit,
     /** Quitar la burbuja (arrastrandola a la X o con el boton del panel): lo resuelve quien la creo. */
     private val onQuit: () -> Unit,
+    /** Reintentar una herramienta del panel de resultados (F5/F6): la llamada real la hace quien la creo. */
+    private val onRetryResult: (ToolId) -> Unit = {},
 ) {
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val owner = OverlayLifecycleOwner()
@@ -71,7 +73,15 @@ class BubbleOverlay(
     private var menuWindow: ComposeOverlayWindow? = null
     private var captureWindow: ComposeOverlayWindow? = null
     private var dismissWindow: ComposeOverlayWindow? = null
+    private var resultsWindow: ComposeOverlayWindow? = null
     private var dismissActive by mutableStateOf(false)
+
+    // Panel de resultados (F5/F6, en vivo): una herramienta a la vez pasa de Working a Ready/Failed
+    // segun van terminando sus llamadas reales — ver OverlayService.runAnalyses().
+    private var resultTools by mutableStateOf(listOf<ToolId>())
+    private var resultStates by mutableStateOf(mapOf<ToolId, ToolResultState>())
+    private var selectedResultTool by mutableStateOf<ToolId?>(null)
+    private var resultsExpanded by mutableStateOf(false)
     private var collectJob: Job? = null
     private var started = false
     private var startX = 0
@@ -111,6 +121,8 @@ class BubbleOverlay(
         captureWindow = null
         menuWindow?.remove()
         menuWindow = null
+        resultsWindow?.remove()
+        resultsWindow = null
         bubbleWindow?.remove()
         bubbleWindow = null
         if (started) owner.destroy()
@@ -222,8 +234,56 @@ class BubbleOverlay(
         Log.d(TAG, "phase $previous -> $next (canCapture=${current.canCapture})")
         if (previous == OverlayPhase.MENU) hideMenu()
         if (previous == OverlayPhase.CAPTURING) hideCapture()
+        if (previous == OverlayPhase.RESULTS) hideResults()
         if (next == OverlayPhase.MENU) showMenu()
         if (next == OverlayPhase.CAPTURING) showCapture()
+        if (next == OverlayPhase.RESULTS) showResultsWindow()
+    }
+
+    /**
+     * Abre el panel de resultados con las herramientas dadas, todas en "Analizando…" — llamado por
+     * `OverlayService` justo antes de empezar a resolverlas (F5/F6, resultado en vivo).
+     */
+    fun showResults(tools: List<ToolId>) {
+        resultTools = tools
+        resultStates = tools.associateWith { ToolResultState.Working }
+        selectedResultTool = tools.firstOrNull()
+        resultsExpanded = false
+        setPhase(OverlayPhase.RESULTS)
+    }
+
+    /** Actualiza una herramienta ya mostrada — recompone el panel abierto sin volver a crearlo. */
+    fun updateResult(tool: ToolId, state: ToolResultState) {
+        resultStates = resultStates + (tool to state)
+    }
+
+    private fun showResultsWindow() {
+        resultsWindow = ComposeOverlayWindow(
+            context = context,
+            windowManager = windowManager,
+            owner = owner,
+            params = fullScreenParams(),
+            content = {
+                ResultsOverlay(
+                    tools = resultTools,
+                    states = resultStates,
+                    selected = selectedResultTool,
+                    expanded = resultsExpanded,
+                    onSelectTab = { selectedResultTool = it },
+                    onToggleExpand = { resultsExpanded = !resultsExpanded },
+                    onClose = { setPhase(OverlayTransitions.onDismissResults(phase)) },
+                    onRetry = { tool ->
+                        resultStates = resultStates + (tool to ToolResultState.Working)
+                        onRetryResult(tool)
+                    },
+                )
+            },
+        ).also { it.add() }
+    }
+
+    private fun hideResults() {
+        resultsWindow?.remove()
+        resultsWindow = null
     }
 
     private fun showMenu() {

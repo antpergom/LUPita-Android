@@ -3,8 +3,6 @@
     <string name="app_name">LUPita</string>
 
     <string name="notification_channel_name">Active bubble</string>
-    <string name="analysis_channel_name">Analysis result</string>
-    <string name="analysis_notification_title">Analysis finished</string>
     <string name="notification_title">LUPita active</string>
     <string name="notification_text">Tap the bubble to analyze</string>
     <string name="notification_action_stop">Turn off</string>
@@ -24,9 +22,7 @@
     <string name="projection_stop">Stop</string>
     <string name="projection_denied">No capture permission: nothing was read</string>
 
-    <!-- F5/F6: result of an AI-backed tool (the tool name goes first, see toolLabel()) -->
-    <string name="analysis_toast">%1$s: %2$s</string>
-    <string name="analysis_result">%1$s (cost: %2$s USD)</string>
+    <!-- F5/F6: reason when a tool does NOT succeed (History "reason" + results panel "Failed" state) -->
     <string name="analysis_no_model">no model configured</string>
     <string name="analysis_no_api_key">no API key saved (Settings → AI provider)</string>
     <string name="analysis_no_pricing">the chosen model has no price configured, no call was made</string>
@@ -35,9 +31,4 @@
     <string name="analysis_denied_depth_calls">this depth\'s call cap was reached</string>
     <string name="analysis_denied_tool_cost">this tool\'s cost cap was reached</string>
     <string name="analysis_denied_global_cost">the global cost cap was reached</string>
-
-    <string name="analysis_tool_general">General analysis</string>
-    <string name="analysis_tool_verify">Fact checking</string>
-    <string name="analysis_tool_ai_detect">AI detection</string>
-    <string name="analysis_tool_entity">Entity research</string>
 </resources>

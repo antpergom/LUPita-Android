@@ -3,8 +3,6 @@
     <string name="app_name">LUPita</string>
 
     <string name="notification_channel_name">Burbuja activa</string>
-    <string name="analysis_channel_name">Resultado del análisis</string>
-    <string name="analysis_notification_title">Análisis terminado</string>
     <string name="notification_title">LUPita activa</string>
     <string name="notification_text">Toca la burbuja para analizar</string>
     <string name="notification_action_stop">Apagar</string>
@@ -24,9 +22,7 @@
     <string name="projection_stop">Parar</string>
     <string name="projection_denied">Sin permiso de captura: no se ha leído nada</string>
 
-    <!-- F5/F6: resultado de una herramienta con IA (el nombre de la herramienta va delante, ver toolLabel()) -->
-    <string name="analysis_toast">%1$s: %2$s</string>
-    <string name="analysis_result">%1$s (coste: %2$s USD)</string>
+    <!-- F5/F6: motivo cuando una herramienta NO tiene exito (Historial "reason" + panel de resultados "Failed") -->
     <string name="analysis_no_model">no hay ningún modelo configurado</string>
     <string name="analysis_no_api_key">no hay ninguna clave de API guardada (Ajustes → Proveedor de IA)</string>
     <string name="analysis_no_pricing">el modelo elegido no tiene precio configurado, no se ha llamado</string>
@@ -35,9 +31,4 @@
     <string name="analysis_denied_depth_calls">tope de llamadas de esta profundidad alcanzado</string>
     <string name="analysis_denied_tool_cost">tope de coste de esta herramienta alcanzado</string>
     <string name="analysis_denied_global_cost">tope de coste global alcanzado</string>
-
-    <string name="analysis_tool_general">Análisis general</string>
-    <string name="analysis_tool_verify">Verificación de hechos</string>
-    <string name="analysis_tool_ai_detect">Detección de IA</string>
-    <string name="analysis_tool_entity">Investigación de entidades</string>
 </resources>

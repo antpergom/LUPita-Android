@@ -210,14 +210,15 @@ private fun MenuPanel(
     }
 }
 
-private fun ToolId.icon(): ImageVector = when (this) {
+// internal (no private): ResultsPanel.kt, mismo modulo, reutiliza el mismo icono/etiqueta por herramienta.
+internal fun ToolId.icon(): ImageVector = when (this) {
     ToolId.GENERAL -> Icons.Rounded.GridView
     ToolId.VERIFY -> Icons.Rounded.Verified
     ToolId.AI_DETECT -> Icons.Rounded.AutoAwesome
     ToolId.ENTITY -> Icons.Rounded.PersonSearch
 }
 
-private fun ToolId.label(): Int = when (this) {
+internal fun ToolId.label(): Int = when (this) {
     ToolId.GENERAL -> R.string.tool_general
     ToolId.VERIFY -> R.string.tool_verify
     ToolId.AI_DETECT -> R.string.tool_ai_detect

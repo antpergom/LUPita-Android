@@ -73,4 +73,17 @@ class OverlayTransitionsTest {
         assertEquals(OverlayPhase.IDLE, OverlayTransitions.onCaptureFinished(OverlayPhase.CAPTURING))
         assertEquals(OverlayPhase.MENU, OverlayTransitions.onCaptureFinished(OverlayPhase.MENU))
     }
+
+    @Test
+    fun `while results are shown, taps and long presses are ignored`() {
+        assertEquals(OverlayPhase.RESULTS, OverlayTransitions.onTap(OverlayPhase.RESULTS, active))
+        assertEquals(OverlayPhase.RESULTS, OverlayTransitions.onLongPress(OverlayPhase.RESULTS))
+    }
+
+    @Test
+    fun `dismissing results only affects an open results panel`() {
+        assertEquals(OverlayPhase.IDLE, OverlayTransitions.onDismissResults(OverlayPhase.RESULTS))
+        assertEquals(OverlayPhase.MENU, OverlayTransitions.onDismissResults(OverlayPhase.MENU))
+        assertEquals(OverlayPhase.IDLE, OverlayTransitions.onDismissResults(OverlayPhase.IDLE))
+    }
 }

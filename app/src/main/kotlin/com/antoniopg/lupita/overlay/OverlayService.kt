@@ -36,7 +36,9 @@ import com.antoniopg.lupita.core.model.ContentPattern
 import com.antoniopg.lupita.core.model.ContextBundle
 import com.antoniopg.lupita.core.model.ContextHeader
 import com.antoniopg.lupita.core.model.CostMicros
+import com.antoniopg.lupita.core.model.Depth
 import com.antoniopg.lupita.core.model.ModelCatalog
+import com.antoniopg.lupita.core.model.ModelOption
 import com.antoniopg.lupita.core.model.PendingSuggestion
 import com.antoniopg.lupita.core.model.PrivacySettings
 import com.antoniopg.lupita.core.model.EncodedImage
@@ -53,6 +55,7 @@ import com.antoniopg.lupita.source.openai.GeneralAnalysisPromptV1
 import com.antoniopg.lupita.source.openai.VerifyPromptV1
 import com.antoniopg.lupita.ui.overlay.AskSaveOverlay
 import com.antoniopg.lupita.ui.overlay.BubbleOverlay
+import com.antoniopg.lupita.ui.overlay.ToolResultState
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -79,6 +82,8 @@ class OverlayService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var bubble: BubbleOverlay? = null
     private var pendingRect: SelectionRect? = null
+    /** La ultima captura con el panel de resultados abierto — la necesita [retryAnalysis]. */
+    private var resultsContext: ResultsContext? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -96,8 +101,10 @@ class OverlayService : Service() {
         // Sin el permiso, addView lanza BadTokenException; la Activity ya lo exige antes de arrancar.
         if (!Settings.canDrawOverlays(this)) return
         val settings = (application as LupitaApp).container.settings
-        bubble = BubbleOverlay(this, settings, scope, onOpenApp = ::openApp, onCapture = ::onCapture, onQuit = ::quit)
-            .also { it.show() }
+        bubble = BubbleOverlay(
+            this, settings, scope,
+            onOpenApp = ::openApp, onCapture = ::onCapture, onQuit = ::quit, onRetryResult = ::retryAnalysis,
+        ).also { it.show() }
     }
 
     /**
@@ -168,10 +175,13 @@ class OverlayService : Service() {
         // linea ya llena el hueco visible y la segunda nunca llega a verse (hallado verificando F2/F3).
         toast(summary.message)
         summary.normalized?.let { delay(TOAST_GAP_MS); toast(it) }
-        notifyAnalyses(summary.analyses)
+        // F5/F6: los resultados de las herramientas van al panel en vivo de la burbuja (BubbleOverlay.
+        // showResults/updateResult), no a un toast/notificacion - solo si ni siquiera pudo arrancar
+        // (sin modelo configurado) hay algo que avisar aqui.
+        summary.analysisError?.let { delay(TOAST_GAP_MS); toast(it) }
     }
 
-    private class Summary(val message: String, val normalized: String? = null, val analyses: List<String> = emptyList())
+    private class Summary(val message: String, val normalized: String? = null, val analysisError: String? = null)
 
     /** La propuesta por nombre (si la hay) se registra siempre: no depende de la medida de auditoria. */
     private suspend fun recordSuggestion(outcome: CapturePipeline.Outcome) {
@@ -205,54 +215,109 @@ class OverlayService : Service() {
      * esta seleccion entre una herramienta y la siguiente — arquitectura F1: "cuatro burbujas en
      * alta reparten, no multiplican" el presupuesto.
      */
+    /**
+     * F5/F6: abre el panel de resultados en vivo (`BubbleOverlay.showResults`) si hay alguna
+     * herramienta activa, y va actualizandolo una herramienta a la vez segun se resuelven (en
+     * serie: `selectionSpent`/`selectionPaidCalls` se acumulan de verdad entre ellas). Devuelve un
+     * mensaje SOLO si ni siquiera pudo arrancar (sin modelo configurado) — el resto de resultados
+     * (listo/fallido/denegado) van al panel, no a un toast.
+     */
     private suspend fun runAnalyses(
         text: String,
         bubbleSettings: BubbleSettings,
         modelId: String?,
         packageName: String,
         appLabel: String?,
-    ): List<String> {
+    ): String? {
         val container = (application as LupitaApp).container
         val effectiveId = ModelCatalog.effectiveSelection(container.modelCatalog, modelId)
         val model = container.modelCatalog.firstOrNull { it.id == effectiveId }
-            ?: return listOf(getString(R.string.analysis_no_model))
+            ?: return getString(R.string.analysis_no_model)
 
-        // Agrupa las herramientas de esta captura en el Historial (F5/F6: varias comparten una).
+        val activeTools = ToolId.entries.filter { it in bubbleSettings.enabledTools }
+        if (activeTools.isEmpty()) return null
+
+        // Agrupa las herramientas de esta captura en el Historial (F5/F6: varias comparten una) y
+        // deja el contexto guardado para que un "Reintentar" del panel sepa que volver a llamar.
         val sessionId = java.util.UUID.randomUUID().toString()
+        resultsContext = ResultsContext(sessionId, text, bubbleSettings.depth, model, packageName, appLabel)
+        bubble?.showResults(activeTools)
+
         var selectionSpent = CostMicros.ZERO
         var selectionPaidCalls = 0
-        val messages = mutableListOf<String>()
-        for (tool in ToolId.entries) {
-            if (tool !in bubbleSettings.enabledTools) continue
-            val (capabilityId, prompt) = promptFor(tool)
-            val outcome = container.analysisRunner.run(
-                tool, capabilityId, prompt, text, bubbleSettings.depth, model, selectionSpent, selectionPaidCalls,
-            )
-            val succeeded = outcome is AnalysisRunner.Outcome.Success
+        for (tool in activeTools) {
+            val outcome = runOneTool(sessionId, tool, text, bubbleSettings.depth, model, packageName, appLabel, selectionSpent, selectionPaidCalls)
             if (outcome is AnalysisRunner.Outcome.Success) {
                 selectionSpent += outcome.cost
                 selectionPaidCalls++
             }
-            val outcomeText = analysisOutcomeText(outcome)
-            container.analysisHistory.record(
-                AnalysisHistoryEntry(
-                    sessionId = sessionId,
-                    timestampMillis = System.currentTimeMillis(),
-                    packageName = packageName,
-                    appLabel = appLabel,
-                    tool = tool,
-                    capability = capabilityId,
-                    model = model.id,
-                    succeeded = succeeded,
-                    text = (outcome as? AnalysisRunner.Outcome.Success)?.text,
-                    reason = if (succeeded) null else outcomeText,
-                    cost = (outcome as? AnalysisRunner.Outcome.Success)?.cost ?: CostMicros.ZERO,
-                ),
-            )
-            messages += getString(R.string.analysis_toast, toolLabel(tool), outcomeText)
         }
-        return messages
+        return null
     }
+
+    /**
+     * Ejecuta UNA herramienta: llama, guarda en Historial (con el texto real, F5/F6) y actualiza el
+     * panel en vivo. Reutilizado por el bucle de [runAnalyses] y por [retryAnalysis].
+     */
+    private suspend fun runOneTool(
+        sessionId: String,
+        tool: ToolId,
+        text: String,
+        depth: Depth,
+        model: ModelOption,
+        packageName: String,
+        appLabel: String?,
+        selectionSpent: CostMicros,
+        selectionPaidCalls: Int,
+    ): AnalysisRunner.Outcome {
+        val container = (application as LupitaApp).container
+        val (capabilityId, prompt) = promptFor(tool)
+        val outcome = container.analysisRunner.run(tool, capabilityId, prompt, text, depth, model, selectionSpent, selectionPaidCalls)
+        val success = outcome as? AnalysisRunner.Outcome.Success
+        container.analysisHistory.record(
+            AnalysisHistoryEntry(
+                sessionId = sessionId,
+                timestampMillis = System.currentTimeMillis(),
+                packageName = packageName,
+                appLabel = appLabel,
+                tool = tool,
+                capability = capabilityId,
+                model = model.id,
+                succeeded = success != null,
+                text = success?.text,
+                reason = if (success == null) failureText(outcome) else null,
+                cost = success?.cost ?: CostMicros.ZERO,
+            ),
+        )
+        bubble?.updateResult(
+            tool,
+            if (success != null) ToolResultState.Ready(success.text) else ToolResultState.Failed(failureText(outcome)),
+        )
+        return outcome
+    }
+
+    /**
+     * "Reintentar" desde el panel (F5/F6): una llamada suelta, sin acumular con lo ya gastado por
+     * las demas herramientas de la seleccion original — limitacion conocida y documentada (un
+     * reintento manual de una sola herramienta no vuelve a sumar `selectionSpent`/`selectionPaidCalls`
+     * de las que ya se resolvieron), sigue verificando su propio tope de herramienta/global.
+     */
+    private fun retryAnalysis(tool: ToolId) {
+        val ctx = resultsContext ?: return
+        scope.launch {
+            runOneTool(ctx.sessionId, tool, ctx.text, ctx.depth, ctx.model, ctx.packageName, ctx.appLabel, CostMicros.ZERO, 0)
+        }
+    }
+
+    /** Contexto de la ultima captura con el panel de resultados abierto — lo necesita [retryAnalysis]. */
+    private data class ResultsContext(
+        val sessionId: String,
+        val text: String,
+        val depth: Depth,
+        val model: ModelOption,
+        val packageName: String,
+        val appLabel: String?,
+    )
 
     private fun promptFor(tool: ToolId): Pair<String, String> = when (tool) {
         ToolId.GENERAL -> GeneralAnalysisPromptV1.CAPABILITY_ID to GeneralAnalysisPromptV1.system
@@ -261,18 +326,10 @@ class OverlayService : Service() {
         ToolId.ENTITY -> EntityPromptV1.CAPABILITY_ID to EntityPromptV1.system
     }
 
-    private fun toolLabel(tool: ToolId): String = getString(
-        when (tool) {
-            ToolId.GENERAL -> R.string.analysis_tool_general
-            ToolId.VERIFY -> R.string.analysis_tool_verify
-            ToolId.AI_DETECT -> R.string.analysis_tool_ai_detect
-            ToolId.ENTITY -> R.string.analysis_tool_entity
-        },
-    )
-
-    private fun analysisOutcomeText(outcome: AnalysisRunner.Outcome): String = when (outcome) {
-        is AnalysisRunner.Outcome.Success ->
-            getString(R.string.analysis_result, outcome.text, "%.4f".format(java.util.Locale.US, outcome.cost.toUsd()))
+    /** Texto de un desenlace SIN exito — usado como `reason` en Historial y como cuerpo del estado
+     * `Failed` del panel. Nunca se llama con un `Success` de verdad (ver [runOneTool]). */
+    private fun failureText(outcome: AnalysisRunner.Outcome): String = when (outcome) {
+        is AnalysisRunner.Outcome.Success -> outcome.text
         is AnalysisRunner.Outcome.Denied -> denyReasonText(outcome.reason)
         is AnalysisRunner.Outcome.Failed -> getString(R.string.analysis_failed, outcome.reason)
         AnalysisRunner.Outcome.NoApiKey -> getString(R.string.analysis_no_api_key)
@@ -327,8 +384,9 @@ class OverlayService : Service() {
                 // F2: normalizacion determinista (filtrado, orden de lectura, roles) + artefacto por hash del texto.
                 val normalized = ContextNormalizer.normalize(content.nodes)
                 val textArtifact = ArtifactHash.of(normalized.plainText)
-                // F5/F6: una entrada por cada herramienta activa en la burbuja (vacio si ninguna lo esta).
-                val analyses = runAnalyses(normalized.plainText, bubbleSettings, modelId, bundle.header.packageName, bundle.header.appLabel)
+                // F5/F6: abre el panel de resultados en vivo (BubbleOverlay.showResults/updateResult) si hay
+                // alguna herramienta activa; `analysisError` solo se rellena si ni siquiera pudo arrancar.
+                val analysisError = runAnalyses(normalized.plainText, bubbleSettings, modelId, bundle.header.packageName, bundle.header.appLabel)
                 Summary(
                     message = getString(
                         R.string.capture_read,
@@ -347,7 +405,7 @@ class OverlayService : Service() {
                         ),
                         textArtifact.hex.take(8),
                     ),
-                    analyses = analyses,
+                    analysisError = analysisError,
                 )
             }
         }
@@ -436,31 +494,6 @@ class OverlayService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    /**
-     * Una notificacion por captura con el resultado de cada herramienta activa (una linea cada
-     * una) — sustituye al toast por herramienta, que se topaba con la cuota de toasts de Android
-     * en cuanto habia varias activas a la vez (bug real hallado verificando F5/F6, 2026-09-25).
-     */
-    private fun notifyAnalyses(messages: List<String>) {
-        if (messages.isEmpty()) return
-        val channel = NotificationChannel(
-            ANALYSIS_CHANNEL_ID,
-            getString(R.string.analysis_channel_name),
-            NotificationManager.IMPORTANCE_DEFAULT,
-        )
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
-        val style = Notification.InboxStyle()
-        messages.forEach { style.addLine(it) }
-        val notification = Notification.Builder(this, ANALYSIS_CHANNEL_ID)
-            .setSmallIcon(Icon.createWithResource(this, R.drawable.ic_notification))
-            .setContentTitle(getString(R.string.analysis_notification_title))
-            .setStyle(style)
-            .setAutoCancel(true)
-            .build()
-        manager.notify(ANALYSIS_NOTIFICATION_ID, notification)
-    }
-
     private fun buildNotification(): Notification {
         val icon = Icon.createWithResource(this, R.drawable.ic_notification)
         val open = PendingIntent.getActivity(
@@ -491,12 +524,6 @@ class OverlayService : Service() {
         const val ACTION_STOP = "com.antoniopg.lupita.action.STOP_OVERLAY"
         private const val CHANNEL_ID = "overlay_service"
         private const val NOTIFICATION_ID = 1
-
-        // F5/F6, bug real (2026-09-25): con varias herramientas activas, Toast.makeText() se topa con
-        // la cuota de toasts de Android y descarta los ultimos en silencio. Los resultados de analisis
-        // van en una notificacion aparte (sin ese limite), una linea por herramienta.
-        private const val ANALYSIS_CHANNEL_ID = "analysis_results"
-        private const val ANALYSIS_NOTIFICATION_ID = 2
 
         /** Solo debe llamarse con la app visible (ver la nota de arranque en segundo plano arriba). */
         fun start(context: Context) {

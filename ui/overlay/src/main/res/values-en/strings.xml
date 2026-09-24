@@ -29,4 +29,15 @@
     <string name="ask_save_body">%1$s. Encryption at rest is not implemented yet (see Privacy and security).</string>
     <string name="ask_save_confirm">Save</string>
     <string name="ask_save_dismiss">Don\'t save</string>
+
+    <string name="results_title">Results</string>
+    <string name="results_expand">Expand</string>
+    <string name="results_collapse">Collapse</string>
+    <string name="results_close">Close</string>
+    <string name="results_status_working">Analyzing…</string>
+    <string name="results_status_ready">Ready</string>
+    <string name="results_status_failed">Failed</string>
+    <string name="results_working_body">Analyzing “%1$s”…</string>
+    <string name="results_failed_pill">Could not complete</string>
+    <string name="results_retry">Retry</string>
 </resources>

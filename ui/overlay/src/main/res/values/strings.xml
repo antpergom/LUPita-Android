@@ -29,4 +29,15 @@
     <string name="ask_save_body">%1$s. El cifrado en reposo todavía no está implementado (ver Privacidad y seguridad).</string>
     <string name="ask_save_confirm">Guardar</string>
     <string name="ask_save_dismiss">No guardar</string>
+
+    <string name="results_title">Resultados</string>
+    <string name="results_expand">Expandir</string>
+    <string name="results_collapse">Contraer</string>
+    <string name="results_close">Cerrar</string>
+    <string name="results_status_working">Analizando…</string>
+    <string name="results_status_ready">Listo</string>
+    <string name="results_status_failed">Falló</string>
+    <string name="results_working_body">Analizando «%1$s»…</string>
+    <string name="results_failed_pill">No se pudo completar</string>
+    <string name="results_retry">Reintentar</string>
 </resources>
