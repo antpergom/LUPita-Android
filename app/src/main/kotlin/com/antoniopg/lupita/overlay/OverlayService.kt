@@ -49,10 +49,10 @@ import com.antoniopg.lupita.core.model.SelectionRect
 import com.antoniopg.lupita.core.model.ToolId
 import com.antoniopg.lupita.orchestrator.AnalysisRunner
 import com.antoniopg.lupita.orchestrator.DenyReason
-import com.antoniopg.lupita.source.openai.AiDetectPromptV1
-import com.antoniopg.lupita.source.openai.EntityPromptV1
-import com.antoniopg.lupita.source.openai.GeneralAnalysisPromptV1
-import com.antoniopg.lupita.source.openai.VerifyPromptV1
+import com.antoniopg.lupita.source.openai.AiDetectPromptV2
+import com.antoniopg.lupita.source.openai.EntityPromptV2
+import com.antoniopg.lupita.source.openai.GeneralAnalysisPromptV2
+import com.antoniopg.lupita.source.openai.VerifyPromptV2
 import com.antoniopg.lupita.ui.overlay.AskSaveOverlay
 import com.antoniopg.lupita.ui.overlay.BubbleOverlay
 import com.antoniopg.lupita.ui.overlay.ToolResultState
@@ -319,11 +319,13 @@ class OverlayService : Service() {
         val appLabel: String?,
     )
 
+    // V2 de los 4 prompts (2026-09-25): piden negrita en los puntos clave, ahora que el panel de
+    // resultados interpreta `**negrita**` de verdad. V1 se queda tal cual (nunca se edita in situ).
     private fun promptFor(tool: ToolId): Pair<String, String> = when (tool) {
-        ToolId.GENERAL -> GeneralAnalysisPromptV1.CAPABILITY_ID to GeneralAnalysisPromptV1.system
-        ToolId.VERIFY -> VerifyPromptV1.CAPABILITY_ID to VerifyPromptV1.system
-        ToolId.AI_DETECT -> AiDetectPromptV1.CAPABILITY_ID to AiDetectPromptV1.system
-        ToolId.ENTITY -> EntityPromptV1.CAPABILITY_ID to EntityPromptV1.system
+        ToolId.GENERAL -> GeneralAnalysisPromptV2.CAPABILITY_ID to GeneralAnalysisPromptV2.system
+        ToolId.VERIFY -> VerifyPromptV2.CAPABILITY_ID to VerifyPromptV2.system
+        ToolId.AI_DETECT -> AiDetectPromptV2.CAPABILITY_ID to AiDetectPromptV2.system
+        ToolId.ENTITY -> EntityPromptV2.CAPABILITY_ID to EntityPromptV2.system
     }
 
     /** Texto de un desenlace SIN exito — usado como `reason` en Historial y como cuerpo del estado

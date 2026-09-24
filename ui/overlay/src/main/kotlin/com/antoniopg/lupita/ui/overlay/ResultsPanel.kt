@@ -2,6 +2,7 @@ package com.antoniopg.lupita.ui.overlay
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,11 +15,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -27,17 +31,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.antoniopg.lupita.core.model.ToolId
 import com.antoniopg.lupita.ui.theme.Lupita
 import com.antoniopg.lupita.ui.theme.LupitaFonts
+import kotlinx.coroutines.launch
 
 /**
  * Estado de una herramienta dentro del panel (F5/F6 en vivo, sustituye a la notificacion anterior
@@ -76,7 +86,16 @@ internal fun ResultsOverlay(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .then(if (expanded) Modifier.fillMaxHeight() else Modifier.height(COLLAPSED_HEIGHT))
+                // Con el panel expandido, el propio recuadro (no solo su contenido) respeta la barra de
+                // estado/notch: pegarlo arriba del todo dejaba el boton de contraer justo bajo el notch,
+                // muy dificil de pulsar para volver a bajarlo (reportado por el usuario en dispositivo).
+                .then(
+                    if (expanded) {
+                        Modifier.fillMaxHeight().statusBarsPadding()
+                    } else {
+                        Modifier.height(COLLAPSED_HEIGHT)
+                    },
+                )
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                 .background(c.background),
         ) {
@@ -101,14 +120,38 @@ internal fun ResultsOverlay(
                     ResultsIconButton(Icons.Rounded.Close, stringResource(R.string.results_close), onClose)
                 }
             }
+            // Con las 4 herramientas de F6, "Investigacion de entidades" queda fuera de la vista inicial
+            // (reportado por el usuario) sin ningun indicio visual de que hay mas pestañas a la derecha
+            // — flechas explicitas que solo aparecen cuando de verdad hay mas contenido hacia ese lado.
+            val tabScroll = rememberScrollState()
+            val tabScope = rememberCoroutineScope()
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                tools.forEach { tool -> ResultTab(tool, states[tool], selected == tool) { onSelectTab(tool) } }
+                if (tabScroll.canScrollBackward) {
+                    ResultsIconButton(Icons.Rounded.ChevronLeft, stringResource(R.string.results_tabs_previous)) {
+                        tabScope.launch { tabScroll.animateScrollBy(-220f) }
+                    }
+                } else {
+                    Spacer(Modifier.size(32.dp))
+                }
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .horizontalScroll(tabScroll)
+                        .padding(horizontal = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    tools.forEach { tool -> ResultTab(tool, states[tool], selected == tool) { onSelectTab(tool) } }
+                }
+                if (tabScroll.canScrollForward) {
+                    ResultsIconButton(Icons.Rounded.ChevronRight, stringResource(R.string.results_tabs_next)) {
+                        tabScope.launch { tabScroll.animateScrollBy(220f) }
+                    }
+                } else {
+                    Spacer(Modifier.size(32.dp))
+                }
             }
             Spacer(Modifier.height(8.dp))
             Column(
@@ -118,7 +161,7 @@ internal fun ResultsOverlay(
                 when (state) {
                     is ToolResultState.Working -> selected?.let { ResultWorking(it) }
                     is ToolResultState.Failed -> selected?.let { ResultFailed(it, state.reason) { onRetry(it) } }
-                    is ToolResultState.Ready -> Text(state.text, color = c.ink, fontSize = 13.sp, lineHeight = 19.sp)
+                    is ToolResultState.Ready -> Text(boldMarkdown(state.text), color = c.ink, fontSize = 13.sp, lineHeight = 19.sp)
                     null -> Unit
                 }
             }
@@ -191,6 +234,34 @@ private fun ResultFailed(tool: ToolId, reason: String, onRetry: () -> Unit) {
     Text(reason, color = c.ink, fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.padding(vertical = 12.dp))
     Button(onClick = onRetry) {
         Text(stringResource(R.string.results_retry))
+    }
+}
+
+/**
+ * Interpreta `**negrita**` (markdown basico) como negrita real — el modelo ya la usa por su cuenta
+ * para resaltar lo mas importante de su respuesta (pedido explicito del usuario, 2026-09-25: verlo
+ * como asteriscos literales en el panel era un bug real, no una decision). Solo `**`, nada mas de
+ * markdown (cursiva, enlaces, listas): lo unico que el prompt pide es negrita en unos pocos puntos.
+ */
+internal fun boldMarkdown(text: String): AnnotatedString = buildAnnotatedString {
+    var i = 0
+    while (i < text.length) {
+        val start = text.indexOf("**", i)
+        if (start == -1) {
+            append(text.substring(i))
+            break
+        }
+        append(text.substring(i, start))
+        val end = text.indexOf("**", start + 2)
+        if (end == -1) {
+            // Sin cierre: se deja tal cual, mejor un "**" suelto que perder texto.
+            append(text.substring(start))
+            break
+        }
+        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+            append(text.substring(start + 2, end))
+        }
+        i = end + 2
     }
 }
 

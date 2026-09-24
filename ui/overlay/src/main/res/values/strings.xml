@@ -40,4 +40,6 @@
     <string name="results_working_body">Analizando «%1$s»…</string>
     <string name="results_failed_pill">No se pudo completar</string>
     <string name="results_retry">Reintentar</string>
+    <string name="results_tabs_previous">Herramienta anterior</string>
+    <string name="results_tabs_next">Siguiente herramienta</string>
 </resources>
