@@ -75,6 +75,8 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
+    // F5 paso 1: credenciales del proveedor de IA cifradas (mismo mecanismo que el proyecto hermano).
+    implementation(libs.tink.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

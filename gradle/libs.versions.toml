@@ -23,6 +23,9 @@ jsoup = "1.23.2"
 # el mismo kotlin=2.4.10/agp=9.3.0 (F4 paso 3: primera BD Room de este proyecto).
 ksp = "2.3.11"
 room = "2.8.4"
+# F5 paso 1: credenciales del proveedor de IA. Misma version que el hermano (ya probada alli para
+# el mismo caso: DeepSeek API key cifrada con Tink en vez de en claro).
+tink = "1.18.0"
 
 [libraries]
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -54,6 +57,8 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+
+tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 
 [plugins]
 # Desde AGP 9.0 el soporte de Kotlin va integrado: NO se aplica "org.jetbrains.kotlin.android".

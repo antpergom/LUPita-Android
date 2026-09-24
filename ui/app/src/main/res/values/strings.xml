@@ -25,6 +25,8 @@
     <string name="privacy_row_desc">Qué apps se leen, medidas de seguridad y excepciones</string>
     <string name="settings_budget">Presupuesto</string>
     <string name="budget_row_desc">Topes de coste y de llamadas, por profundidad, herramienta y periodo</string>
+    <string name="settings_ai_provider">Proveedor de IA</string>
+    <string name="ai_provider_row_desc">La clave de API que usa el análisis</string>
     <string name="accessibility_row_title">Accesibilidad</string>
     <string name="accessibility_row_desc">Qué lee LUPita y cómo activarlo</string>
     <string name="accessibility_title">Accesibilidad</string>
@@ -79,6 +81,15 @@
     <string name="depth_low">Baja</string>
     <string name="depth_medium">Media</string>
     <string name="depth_high">Alta</string>
+
+    <string name="ai_provider_title">Proveedor de IA</string>
+    <string name="ai_provider_intro">La clave se guarda cifrada en este dispositivo y no vuelve a mostrarse.</string>
+    <string name="ai_provider_deepseek">DeepSeek</string>
+    <string name="ai_provider_configured">Clave guardada.</string>
+    <string name="ai_provider_not_configured">Todavía no hay ninguna clave guardada.</string>
+    <string name="ai_provider_key_label">Clave de API</string>
+    <string name="ai_provider_save">Guardar</string>
+    <string name="ai_provider_clear">Borrar</string>
 
     <string name="debug_row_title">Depuración</string>
     <string name="debug_row_desc">Solo builds de desarrollo: lo capturado y el grabador de fixtures</string>

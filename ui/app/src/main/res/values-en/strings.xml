@@ -25,6 +25,8 @@
     <string name="privacy_row_desc">Which apps are read, security measures and exceptions</string>
     <string name="settings_budget">Budget</string>
     <string name="budget_row_desc">Cost and call caps, by depth, tool and period</string>
+    <string name="settings_ai_provider">AI provider</string>
+    <string name="ai_provider_row_desc">The API key that powers analysis</string>
     <string name="accessibility_row_title">Accessibility</string>
     <string name="accessibility_row_desc">What LUPita reads and how to turn it on</string>
     <string name="accessibility_title">Accessibility</string>
@@ -79,6 +81,15 @@
     <string name="depth_low">Low</string>
     <string name="depth_medium">Medium</string>
     <string name="depth_high">High</string>
+
+    <string name="ai_provider_title">AI provider</string>
+    <string name="ai_provider_intro">The key is stored encrypted on this device and is never shown again.</string>
+    <string name="ai_provider_deepseek">DeepSeek</string>
+    <string name="ai_provider_configured">Key saved.</string>
+    <string name="ai_provider_not_configured">No key saved yet.</string>
+    <string name="ai_provider_key_label">API key</string>
+    <string name="ai_provider_save">Save</string>
+    <string name="ai_provider_clear">Clear</string>
 
     <string name="debug_row_title">Debug</string>
     <string name="debug_row_desc">Development builds only: what was captured and the fixture recorder</string>

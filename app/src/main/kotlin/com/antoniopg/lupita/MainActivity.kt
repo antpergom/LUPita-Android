@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.antoniopg.lupita.core.model.AiCredentials
 import com.antoniopg.lupita.core.model.AppMatch
 import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.BudgetSettings
@@ -37,6 +38,7 @@ import com.antoniopg.lupita.core.model.UserRule
 import com.antoniopg.lupita.overlay.OverlayService
 import com.antoniopg.lupita.ui.app.AppScreen
 import com.antoniopg.lupita.ui.app.accessibility.AccessibilityUi
+import com.antoniopg.lupita.ui.app.aiprovider.AiProviderUi
 import com.antoniopg.lupita.ui.app.budget.BudgetDepthRow
 import com.antoniopg.lupita.ui.app.budget.BudgetToolRow
 import com.antoniopg.lupita.ui.app.budget.BudgetUi
@@ -170,6 +172,16 @@ class MainActivity : ComponentActivity() {
                                 },
                             )
                         }
+                        val aiCredentialsConfigured by remember { container.aiCredentials.credentials.map { it != null } }
+                            .collectAsState(initial = false)
+                        val aiProvider = remember(scope, aiCredentialsConfigured) {
+                            val repo = container.aiCredentials
+                            AiProviderUi(
+                                keyConfigured = aiCredentialsConfigured,
+                                onSave = { key -> scope.launch { repo.save(AiCredentials(key)) } },
+                                onClear = { scope.launch { repo.clear() } },
+                            )
+                        }
                         AppScreen(
                             requestedSection = section,
                             onRequestConsumed = { section = null },
@@ -183,6 +195,7 @@ class MainActivity : ComponentActivity() {
                             onSelectLanguage = container.language::set,
                             privacy = privacy,
                             budget = budget,
+                            aiProvider = aiProvider,
                             accessibility = AccessibilityUi(
                                 isEnabled = accessibilityEnabled,
                                 onOpenSettings = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },

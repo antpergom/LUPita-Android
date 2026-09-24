@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.antoniopg.lupita.capability.privacy.PrivacyCatalogParser
 import com.antoniopg.lupita.capability.privacy.PrivacyGate
+import com.antoniopg.lupita.core.model.AiCredentialsRepository
 import com.antoniopg.lupita.core.model.BudgetDefaults
 import com.antoniopg.lupita.core.model.BudgetSettingsRepository
 import com.antoniopg.lupita.core.model.CostLogRepository
@@ -20,7 +21,14 @@ import com.antoniopg.lupita.data.DataStoreBudgetSettingsRepository
 import com.antoniopg.lupita.data.DataStorePrivacySettingsRepository
 import com.antoniopg.lupita.data.DataStoreSettingsRepository
 import com.antoniopg.lupita.data.RoomCostLogRepository
+import com.antoniopg.lupita.data.TinkAiCredentialsRepository
+import com.antoniopg.lupita.data.crypto.AeadFieldCodec
 import com.antoniopg.lupita.data.db.LupitaDatabase
+import com.google.crypto.tink.Aead
+import com.google.crypto.tink.KeyTemplates
+import com.google.crypto.tink.RegistryConfiguration
+import com.google.crypto.tink.aead.AeadConfig
+import com.google.crypto.tink.integration.android.AndroidKeysetManager
 
 class LupitaApp : Application() {
     val container: AppContainer by lazy { AppContainer(this) }
@@ -71,6 +79,31 @@ class AppContainer(private val context: Context) {
 
     /** Log de coste/modelo de cada llamada de pago — el registro "facilmente accesible" pedido por el usuario. */
     val costLog: CostLogRepository by lazy { RoomCostLogRepository(database.costLogDao()) }
+
+    /**
+     * Clave maestra en el Android Keystore (hardware/StrongBox si el dispositivo lo soporta): el
+     * keyset que la usa vive cifrado en un `SharedPreferences` normal, pero la clave en si nunca sale
+     * del Keystore. Mismo mecanismo que `app-android-rrss-publisher` (proyecto hermano), sin Hilt.
+     */
+    private val credentialsAead: Aead by lazy {
+        AeadConfig.register()
+        AndroidKeysetManager.Builder()
+            .withSharedPref(context, "lupita_credentials_keyset", "lupita_credentials_keyset_prefs")
+            .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
+            .withMasterKeyUri("android-keystore://lupita_credentials_master_key")
+            .build()
+            .keysetHandle
+            .getPrimitive(RegistryConfiguration.get(), Aead::class.java)
+    }
+
+    private val credentialsDataStore by lazy {
+        PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("lupita_credentials") }
+    }
+
+    /** Clave de API del proveedor de IA (F5 paso 1), cifrada — nunca la misma preferencia sin cifrar. */
+    val aiCredentials: AiCredentialsRepository by lazy {
+        TinkAiCredentialsRepository(credentialsDataStore, AeadFieldCodec(credentialsAead))
+    }
 
     private fun readAsset(name: String): String = context.assets.open(name).bufferedReader().use { it.readText() }
 }
