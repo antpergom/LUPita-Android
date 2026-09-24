@@ -146,4 +146,8 @@
     <string name="history_title">Historial</string>
     <string name="history_empty_title">Aún no hay análisis</string>
     <string name="history_empty_body">Los análisis que hagas aparecerán aquí, con su fecha, la zona capturada y las herramientas usadas.</string>
+    <string name="tool_general">Análisis general</string>
+    <string name="tool_verify">Verificación de hechos</string>
+    <string name="tool_ai_detect">Detección de IA</string>
+    <string name="tool_entity">Investigación de entidades</string>
 </resources>

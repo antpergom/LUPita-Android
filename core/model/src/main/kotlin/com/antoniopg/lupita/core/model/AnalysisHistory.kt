@@ -31,3 +31,31 @@ interface AnalysisHistoryRepository {
     suspend fun record(entry: AnalysisHistoryEntry)
     fun observeRecent(limit: Int): Flow<List<AnalysisHistoryEntry>>
 }
+
+/** Una captura, con las herramientas que se le aplicaron — una tarjeta de "Historial" por captura. */
+data class AnalysisSession(
+    val sessionId: String,
+    val timestampMillis: Long,
+    val packageName: String,
+    val appLabel: String?,
+    val tools: List<ToolId>,
+)
+
+/**
+ * Agrupa entradas planas (una por herramienta) en sesiones (una por captura), mas recientes
+ * primero. Puro — sin formateo de fecha ni etiquetas localizadas, eso es cosa de la UI.
+ */
+fun List<AnalysisHistoryEntry>.groupedBySession(): List<AnalysisSession> {
+    val bySession = LinkedHashMap<String, MutableList<AnalysisHistoryEntry>>()
+    forEach { bySession.getOrPut(it.sessionId) { mutableListOf() }.add(it) }
+    return bySession.map { (sessionId, entries) ->
+        val newest = entries.maxBy { it.timestampMillis }
+        AnalysisSession(
+            sessionId = sessionId,
+            timestampMillis = newest.timestampMillis,
+            packageName = newest.packageName,
+            appLabel = newest.appLabel,
+            tools = entries.sortedBy { ToolId.entries.indexOf(it.tool) }.map { it.tool },
+        )
+    }.sortedByDescending { it.timestampMillis }
+}

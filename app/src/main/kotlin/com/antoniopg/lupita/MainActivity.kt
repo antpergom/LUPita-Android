@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import com.antoniopg.lupita.core.model.AiCredentials
 import com.antoniopg.lupita.core.model.AppMatch
 import com.antoniopg.lupita.core.model.AppSection
@@ -28,6 +29,7 @@ import com.antoniopg.lupita.core.model.BudgetSettings
 import com.antoniopg.lupita.core.model.CostMicros
 import com.antoniopg.lupita.core.model.Depth
 import com.antoniopg.lupita.core.model.ModelCatalog
+import com.antoniopg.lupita.core.model.groupedBySession
 import com.antoniopg.lupita.core.model.PermissionState
 import com.antoniopg.lupita.core.model.PrivacyRegions
 import com.antoniopg.lupita.core.model.PrivacySettings
@@ -43,9 +45,12 @@ import com.antoniopg.lupita.ui.app.budget.BudgetDepthRow
 import com.antoniopg.lupita.ui.app.budget.BudgetToolRow
 import com.antoniopg.lupita.ui.app.budget.BudgetUi
 import com.antoniopg.lupita.ui.app.debug.DebugUi
+import com.antoniopg.lupita.ui.app.history.HistoryCard
+import com.antoniopg.lupita.ui.app.history.HistoryUi
 import com.antoniopg.lupita.ui.app.privacy.PrivacyActions
 import com.antoniopg.lupita.ui.app.privacy.PrivacyUi
 import com.antoniopg.lupita.ui.app.onboarding.OnboardingScreen
+import com.antoniopg.lupita.ui.app.R as UiAppR
 import com.antoniopg.lupita.ui.theme.LupitaTheme
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -182,6 +187,28 @@ class MainActivity : ComponentActivity() {
                                 onClear = { scope.launch { repo.clear() } },
                             )
                         }
+                        // Etiquetas localizadas fuera del remember() de abajo: stringResource() es
+                        // @Composable, no se puede llamar dentro de un calculation de remember.
+                        val toolLabels = mapOf(
+                            ToolId.GENERAL to stringResource(UiAppR.string.tool_general),
+                            ToolId.VERIFY to stringResource(UiAppR.string.tool_verify),
+                            ToolId.AI_DETECT to stringResource(UiAppR.string.tool_ai_detect),
+                            ToolId.ENTITY to stringResource(UiAppR.string.tool_entity),
+                        )
+                        val historyEntries by remember { container.analysisHistory.observeRecent(30) }
+                            .collectAsState(initial = emptyList())
+                        val history = remember(historyEntries, toolLabels) {
+                            HistoryUi(
+                                cards = historyEntries.groupedBySession().map { s ->
+                                    HistoryCard(
+                                        sessionId = s.sessionId,
+                                        dateLabel = formatSessionDate(s.timestampMillis),
+                                        zoneLabel = s.appLabel ?: s.packageName,
+                                        tags = s.tools.mapNotNull { toolLabels[it] },
+                                    )
+                                },
+                            )
+                        }
                         AppScreen(
                             requestedSection = section,
                             onRequestConsumed = { section = null },
@@ -196,6 +223,7 @@ class MainActivity : ComponentActivity() {
                             privacy = privacy,
                             budget = budget,
                             aiProvider = aiProvider,
+                            history = history,
                             accessibility = AccessibilityUi(
                                 isEnabled = accessibilityEnabled,
                                 onOpenSettings = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
@@ -274,3 +302,7 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_SECTION = "com.antoniopg.lupita.extra.SECTION"
     }
 }
+
+/** "20 sep, 14:32" — formato del mock de Historial (Claude Design, `LUPita.dc.html`). */
+private fun formatSessionDate(timestampMillis: Long): String =
+    java.text.SimpleDateFormat("d MMM, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(timestampMillis))

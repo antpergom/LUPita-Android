@@ -22,6 +22,7 @@ import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.LanguageOption
 import com.antoniopg.lupita.core.model.ModelOption
 import com.antoniopg.lupita.ui.app.history.HistoryScreen
+import com.antoniopg.lupita.ui.app.history.HistoryUi
 import com.antoniopg.lupita.ui.app.accessibility.AccessibilityDisclosureScreen
 import com.antoniopg.lupita.ui.app.accessibility.AccessibilityUi
 import com.antoniopg.lupita.ui.app.aiprovider.AiProviderScreen
@@ -58,6 +59,7 @@ fun AppScreen(
     privacy: PrivacyUi,
     budget: BudgetUi,
     aiProvider: AiProviderUi,
+    history: HistoryUi,
     accessibility: AccessibilityUi,
     /** `null` si no procede mostrarla (solo builds `debuggable`). */
     debug: DebugUi?,
@@ -127,7 +129,7 @@ fun AppScreen(
         },
     ) { padding ->
         when {
-            section == AppSection.HISTORY -> HistoryScreen(modifier = Modifier.padding(padding))
+            section == AppSection.HISTORY -> HistoryScreen(ui = history, modifier = Modifier.padding(padding))
             showAccessibility -> AccessibilityDisclosureScreen(
                 ui = accessibility,
                 onBack = { showAccessibility = false },
