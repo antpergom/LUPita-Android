@@ -26,6 +26,7 @@ import com.antoniopg.lupita.capability.screen.ProjectionScreenSource
 import com.antoniopg.lupita.capability.screen.ProjectionSession
 import com.antoniopg.lupita.capability.screen.RegionImage
 import com.antoniopg.lupita.capture.ProjectionConsentActivity
+import com.antoniopg.lupita.core.model.AnalysisHistoryEntry
 import com.antoniopg.lupita.core.model.AppSection
 import com.antoniopg.lupita.core.model.ArtifactHash
 import com.antoniopg.lupita.core.model.AuditEntry
@@ -204,12 +205,20 @@ class OverlayService : Service() {
      * esta seleccion entre una herramienta y la siguiente — arquitectura F1: "cuatro burbujas en
      * alta reparten, no multiplican" el presupuesto.
      */
-    private suspend fun runAnalyses(text: String, bubbleSettings: BubbleSettings, modelId: String?): List<String> {
+    private suspend fun runAnalyses(
+        text: String,
+        bubbleSettings: BubbleSettings,
+        modelId: String?,
+        packageName: String,
+        appLabel: String?,
+    ): List<String> {
         val container = (application as LupitaApp).container
         val effectiveId = ModelCatalog.effectiveSelection(container.modelCatalog, modelId)
         val model = container.modelCatalog.firstOrNull { it.id == effectiveId }
             ?: return listOf(getString(R.string.analysis_no_model))
 
+        // Agrupa las herramientas de esta captura en el Historial (F5/F6: varias comparten una).
+        val sessionId = java.util.UUID.randomUUID().toString()
         var selectionSpent = CostMicros.ZERO
         var selectionPaidCalls = 0
         val messages = mutableListOf<String>()
@@ -219,11 +228,28 @@ class OverlayService : Service() {
             val outcome = container.analysisRunner.run(
                 tool, capabilityId, prompt, text, bubbleSettings.depth, model, selectionSpent, selectionPaidCalls,
             )
+            val succeeded = outcome is AnalysisRunner.Outcome.Success
             if (outcome is AnalysisRunner.Outcome.Success) {
                 selectionSpent += outcome.cost
                 selectionPaidCalls++
             }
-            messages += getString(R.string.analysis_toast, toolLabel(tool), analysisOutcomeText(outcome))
+            val outcomeText = analysisOutcomeText(outcome)
+            container.analysisHistory.record(
+                AnalysisHistoryEntry(
+                    sessionId = sessionId,
+                    timestampMillis = System.currentTimeMillis(),
+                    packageName = packageName,
+                    appLabel = appLabel,
+                    tool = tool,
+                    capability = capabilityId,
+                    model = model.id,
+                    succeeded = succeeded,
+                    text = (outcome as? AnalysisRunner.Outcome.Success)?.text,
+                    reason = if (succeeded) null else outcomeText,
+                    cost = (outcome as? AnalysisRunner.Outcome.Success)?.cost ?: CostMicros.ZERO,
+                ),
+            )
+            messages += getString(R.string.analysis_toast, toolLabel(tool), outcomeText)
         }
         return messages
     }
@@ -302,7 +328,7 @@ class OverlayService : Service() {
                 val normalized = ContextNormalizer.normalize(content.nodes)
                 val textArtifact = ArtifactHash.of(normalized.plainText)
                 // F5/F6: una entrada por cada herramienta activa en la burbuja (vacio si ninguna lo esta).
-                val analyses = runAnalyses(normalized.plainText, bubbleSettings, modelId)
+                val analyses = runAnalyses(normalized.plainText, bubbleSettings, modelId, bundle.header.packageName, bundle.header.appLabel)
                 Summary(
                     message = getString(
                         R.string.capture_read,

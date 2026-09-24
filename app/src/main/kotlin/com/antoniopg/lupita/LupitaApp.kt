@@ -8,6 +8,7 @@ import androidx.room.Room
 import com.antoniopg.lupita.capability.privacy.PrivacyCatalogParser
 import com.antoniopg.lupita.capability.privacy.PrivacyGate
 import com.antoniopg.lupita.core.model.AiCredentialsRepository
+import com.antoniopg.lupita.core.model.AnalysisHistoryRepository
 import com.antoniopg.lupita.core.model.BudgetDefaults
 import com.antoniopg.lupita.core.model.BudgetSettingsRepository
 import com.antoniopg.lupita.core.model.CostLogRepository
@@ -24,6 +25,7 @@ import com.antoniopg.lupita.source.openai.OpenAiClient
 import com.antoniopg.lupita.data.DataStoreBudgetSettingsRepository
 import com.antoniopg.lupita.data.DataStorePrivacySettingsRepository
 import com.antoniopg.lupita.data.DataStoreSettingsRepository
+import com.antoniopg.lupita.data.RoomAnalysisHistoryRepository
 import com.antoniopg.lupita.data.RoomCostLogRepository
 import com.antoniopg.lupita.data.TinkAiCredentialsRepository
 import com.antoniopg.lupita.data.crypto.AeadFieldCodec
@@ -78,11 +80,16 @@ class AppContainer(private val context: Context) {
 
     /** Primera BD Room del proyecto (F4 paso 3): solo el log de coste por ahora, ver LupitaDatabase.kt. */
     private val database: LupitaDatabase by lazy {
-        Room.databaseBuilder(context, LupitaDatabase::class.java, "lupita_database").build()
+        Room.databaseBuilder(context, LupitaDatabase::class.java, "lupita_database")
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
     }
 
     /** Log de coste/modelo de cada llamada de pago — el registro "facilmente accesible" pedido por el usuario. */
     val costLog: CostLogRepository by lazy { RoomCostLogRepository(database.costLogDao()) }
+
+    /** El texto real de cada resultado — sin esto, cerrar el panel de resultados lo perdia para siempre. */
+    val analysisHistory: AnalysisHistoryRepository by lazy { RoomAnalysisHistoryRepository(database.analysisHistoryDao()) }
 
     /**
      * Clave maestra en el Android Keystore (hardware/StrongBox si el dispositivo lo soporta): el
