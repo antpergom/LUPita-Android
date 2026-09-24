@@ -22,14 +22,20 @@
     <string name="projection_stop">Stop</string>
     <string name="projection_denied">No capture permission: nothing was read</string>
 
-    <!-- F5: "General analysis" result -->
-    <string name="analysis_result">AI: %1$s (cost: %2$s USD)</string>
-    <string name="analysis_no_model">AI: no model configured</string>
-    <string name="analysis_no_api_key">AI: no API key saved (Settings → AI provider)</string>
-    <string name="analysis_no_pricing">AI: the chosen model has no price configured, no call was made</string>
-    <string name="analysis_failed">AI: failed — %1$s</string>
-    <string name="analysis_denied_depth_cost">AI: this depth\'s cost cap was reached</string>
-    <string name="analysis_denied_depth_calls">AI: this depth\'s call cap was reached</string>
-    <string name="analysis_denied_tool_cost">AI: General analysis\' cost cap was reached</string>
-    <string name="analysis_denied_global_cost">AI: the global cost cap was reached</string>
+    <!-- F5/F6: result of an AI-backed tool (the tool name goes first, see toolLabel()) -->
+    <string name="analysis_toast">%1$s: %2$s</string>
+    <string name="analysis_result">%1$s (cost: %2$s USD)</string>
+    <string name="analysis_no_model">no model configured</string>
+    <string name="analysis_no_api_key">no API key saved (Settings → AI provider)</string>
+    <string name="analysis_no_pricing">the chosen model has no price configured, no call was made</string>
+    <string name="analysis_failed">failed — %1$s</string>
+    <string name="analysis_denied_depth_cost">this depth\'s cost cap was reached</string>
+    <string name="analysis_denied_depth_calls">this depth\'s call cap was reached</string>
+    <string name="analysis_denied_tool_cost">this tool\'s cost cap was reached</string>
+    <string name="analysis_denied_global_cost">the global cost cap was reached</string>
+
+    <string name="analysis_tool_general">General analysis</string>
+    <string name="analysis_tool_verify">Fact checking</string>
+    <string name="analysis_tool_ai_detect">AI detection</string>
+    <string name="analysis_tool_entity">Entity research</string>
 </resources>

@@ -17,7 +17,7 @@ import com.antoniopg.lupita.core.model.PrivacyCatalog
 import com.antoniopg.lupita.core.model.PrivacyRegions
 import com.antoniopg.lupita.core.model.PrivacySettingsRepository
 import com.antoniopg.lupita.core.model.SettingsRepository
-import com.antoniopg.lupita.orchestrator.GeneralAnalysisRunner
+import com.antoniopg.lupita.orchestrator.AnalysisRunner
 import com.antoniopg.lupita.orchestrator.ResourceQueues
 import com.antoniopg.lupita.source.openai.HttpOpenAiClient
 import com.antoniopg.lupita.source.openai.OpenAiClient
@@ -116,11 +116,11 @@ class AppContainer(private val context: Context) {
     private val resourceQueues: ResourceQueues by lazy { ResourceQueues() }
 
     /**
-     * Primer consumidor real de F4 (F5 paso 3): presupuesto + colas + log de coste alrededor de
-     * "Analisis general". Ver `orchestrator/GeneralAnalysisRunner.kt`.
+     * Consumidor real de F4 (F5 paso 3, generalizado en F6): presupuesto + colas + log de coste
+     * alrededor de cualquiera de las 4 herramientas. Ver `orchestrator/AnalysisRunner.kt`.
      */
-    val generalAnalysisRunner: GeneralAnalysisRunner by lazy {
-        GeneralAnalysisRunner(aiCredentials, budgetSettings, budgetDefaults, costLog, resourceQueues, openAiClient)
+    val analysisRunner: AnalysisRunner by lazy {
+        AnalysisRunner(aiCredentials, budgetSettings, budgetDefaults, costLog, resourceQueues, openAiClient)
     }
 
     private fun readAsset(name: String): String = context.assets.open(name).bufferedReader().use { it.readText() }

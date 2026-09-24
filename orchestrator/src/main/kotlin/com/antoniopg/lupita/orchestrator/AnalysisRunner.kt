@@ -15,26 +15,28 @@ import com.antoniopg.lupita.core.model.periodSpent
 import com.antoniopg.lupita.core.model.toolSpent
 import com.antoniopg.lupita.source.openai.AnalysisRequest
 import com.antoniopg.lupita.source.openai.AnalysisResult
-import com.antoniopg.lupita.source.openai.GeneralAnalysisPromptV1
 import com.antoniopg.lupita.source.openai.OpenAiClient
 import com.antoniopg.lupita.source.openai.OpenAiCost
 import com.antoniopg.lupita.source.openai.OpenAiRequestBuilder
 import kotlinx.coroutines.flow.first
 
 /**
- * Primer consumidor real de F4: une presupuesto, colas y log de coste alrededor de la herramienta
- * "Analisis general" (`ToolId.GENERAL`, F5). El resto de herramientas (Verificacion, Deteccion de
- * IA, Entidades) tendran su propio runner cuando lleguen (F6) - este no se generaliza a proposito
- * hasta que exista un segundo caso real que confirme la forma comun.
+ * Consumidor real de F4: une presupuesto, colas y log de coste alrededor de cualquiera de las
+ * cuatro herramientas (F5: Analisis general; F6: Verificacion, Deteccion de IA, Investigacion de
+ * entidades) — generalizado en F6 a partir del `GeneralAnalysisRunner` original de F5 en cuanto
+ * hubo un segundo caso real que confirmara la forma comun (decision explicita de F5: no
+ * generalizar antes de tiempo).
  *
  * El presupuesto se comprueba ANTES de llamar con una cota superior conservadora
  * ([OpenAiCost.worstCaseEstimate], acotada por `max_output_tokens`), nunca con el coste real (no se
  * conoce hasta que la API responde) - asi nunca se "cuela" una llamada por encima del tope.
- * `selectionSpent`/`selectionPaidCalls` son 0 siempre: hoy una seleccion equivale a una unica
- * llamada (solo esta herramienta esta cableada); cuando varias herramientas compartan una misma
- * captura habra que acumularlos de verdad entre llamadas de la misma seleccion.
+ *
+ * [selectionSpent]/[selectionPaidCalls] (parametros de [run], F6): lo YA gastado/llamado en esta
+ * misma seleccion (una captura) por las herramientas ejecutadas antes que esta — el llamador
+ * (`OverlayService`) los acumula entre llamadas sucesivas cuando varias herramientas comparten una
+ * captura (arquitectura F1: "cuatro burbujas en alta reparten, no multiplican" el presupuesto).
  */
-class GeneralAnalysisRunner(
+class AnalysisRunner(
     private val aiCredentials: AiCredentialsRepository,
     private val budgetSettings: BudgetSettingsRepository,
     private val budgetDefaults: BudgetDefaults,
@@ -51,12 +53,21 @@ class GeneralAnalysisRunner(
         data object NoPricing : Outcome
     }
 
-    suspend fun run(text: String, depth: Depth, model: ModelOption): Outcome {
+    suspend fun run(
+        tool: ToolId,
+        capabilityId: String,
+        systemPrompt: String,
+        text: String,
+        depth: Depth,
+        model: ModelOption,
+        selectionSpent: CostMicros = CostMicros.ZERO,
+        selectionPaidCalls: Int = 0,
+    ): Outcome {
         val apiKey = aiCredentials.credentials.first()?.apiKey ?: return Outcome.NoApiKey
 
         val maxOutputTokens = OpenAiRequestBuilder.maxOutputTokens(depth)
         val worstCase = OpenAiCost.worstCaseEstimate(
-            promptChars = GeneralAnalysisPromptV1.system.length,
+            promptChars = systemPrompt.length,
             textChars = text.length,
             maxOutputTokens = maxOutputTokens,
             model = model,
@@ -64,13 +75,13 @@ class GeneralAnalysisRunner(
 
         val settings = budgetSettings.settings.first()
         val depthBudget = settings.depthBudget(depth, budgetDefaults)
-        val toolLimit = settings.toolLimit(ToolId.GENERAL, budgetDefaults)
+        val toolLimit = settings.toolLimit(tool, budgetDefaults)
         val globalLimit = settings.effectiveGlobalLimit(budgetDefaults)
         val periodStart = BudgetPeriodClock.periodStartMillis(settings.globalPeriod, nowMillis())
         val state = BudgetState(
-            selectionSpent = CostMicros.ZERO,
-            selectionPaidCalls = 0,
-            toolSpent = costLog.toolSpent(ToolId.GENERAL, periodStart),
+            selectionSpent = selectionSpent,
+            selectionPaidCalls = selectionPaidCalls,
+            toolSpent = costLog.toolSpent(tool, periodStart),
             periodSpent = costLog.periodSpent(periodStart),
         )
 
@@ -90,9 +101,9 @@ class GeneralAnalysisRunner(
                 costLog.record(
                     CostLogEntry(
                         timestampMillis = nowMillis(),
-                        tool = ToolId.GENERAL,
+                        tool = tool,
                         depth = depth,
-                        capability = GeneralAnalysisPromptV1.CAPABILITY_ID,
+                        capability = capabilityId,
                         resourceClass = ResourceClass.LLM,
                         cost = cost,
                         succeeded = true,
