@@ -208,4 +208,39 @@ class AnalysisRunnerTest {
         assertEquals(AnalysisRunner.Outcome.Denied(DenyReason.DEPTH_CALLS), outcome)
         assertEquals(0, client.callCount)
     }
+
+    @Test
+    fun `a transient failure is retried once and succeeds on the second attempt`() = runTest {
+        val success = AnalysisResult.Success(text = "analisis", inputTokens = 100, outputTokens = 50, cachedInputTokens = 0, model = "gpt-6-luna")
+        val client = FakeOpenAiClient(listOf(AnalysisResult.Failed("HTTP 503", transient = true), success))
+        val (runner, costLog) = runner(openAi = client)
+
+        val outcome = runner.runGeneral("texto", Depth.LOW, luna)
+
+        assertEquals(AnalysisRunner.Outcome.Success("analisis", (outcome as AnalysisRunner.Outcome.Success).cost), outcome)
+        assertEquals(2, client.callCount)
+        assertEquals(1, costLog.recorded.size)
+    }
+
+    @Test
+    fun `a permanent failure is never retried`() = runTest {
+        val client = FakeOpenAiClient(AnalysisResult.Failed("401 invalid api key", transient = false))
+        val (runner, _) = runner(openAi = client)
+
+        val outcome = runner.runGeneral("texto", Depth.LOW, luna)
+
+        assertEquals(AnalysisRunner.Outcome.Failed("401 invalid api key"), outcome)
+        assertEquals(1, client.callCount)
+    }
+
+    @Test
+    fun `retries stop after the max attempts even if every one is transient`() = runTest {
+        val client = FakeOpenAiClient(AnalysisResult.Failed("HTTP 503", transient = true))
+        val (runner, _) = runner(openAi = client)
+
+        val outcome = runner.runGeneral("texto", Depth.LOW, luna)
+
+        assertEquals(AnalysisRunner.Outcome.Failed("HTTP 503"), outcome)
+        assertEquals(2, client.callCount)
+    }
 }

@@ -19,5 +19,11 @@ sealed interface AnalysisResult {
         val model: String,
     ) : AnalysisResult
 
-    data class Failed(val reason: String) : AnalysisResult
+    /**
+     * [transient] distingue lo que merece un reintento (429, 5xx, fallo de red/timeout) de lo que
+     * no (401/403 clave invalida, 400 request mal formada, etc.) — el orquestador (F4: "eso es del
+     * orquestador, que decide cuando merece la pena volver a gastar") es quien reintenta, nunca el
+     * cliente HTTP.
+     */
+    data class Failed(val reason: String, val transient: Boolean = false) : AnalysisResult
 }

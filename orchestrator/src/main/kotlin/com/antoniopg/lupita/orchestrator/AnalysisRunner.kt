@@ -18,6 +18,7 @@ import com.antoniopg.lupita.source.openai.AnalysisResult
 import com.antoniopg.lupita.source.openai.OpenAiClient
 import com.antoniopg.lupita.source.openai.OpenAiCost
 import com.antoniopg.lupita.source.openai.OpenAiRequestBuilder
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
 /**
@@ -88,8 +89,12 @@ class AnalysisRunner(
         val decision = BudgetEnforcer.evaluate(worstCase, depthBudget, toolLimit, globalLimit, state)
         if (decision is BudgetDecision.Denied) return Outcome.Denied(decision.reason)
 
-        val result = queues.run(ResourceClass.LLM) {
-            openAi.analyze(AnalysisRequest(text = text, depth = depth), apiKey, model.id)
+        // El presupuesto se comprobo UNA vez arriba: los reintentos son del mismo intento ya
+        // permitido (nada se ha gastado todavia, ni aunque fallen), no piden permiso otra vez.
+        val result = retryTransient {
+            queues.run(ResourceClass.LLM) {
+                openAi.analyze(AnalysisRequest(text = text, depth = depth), apiKey, model.id)
+            }
         }
 
         return when (result) {
@@ -113,5 +118,28 @@ class AnalysisRunner(
                 Outcome.Success(result.text, cost)
             }
         }
+    }
+
+    /**
+     * Reintenta solo [AnalysisResult.Failed] con `transient = true` (429/5xx/fallo de red — ver
+     * `HttpOpenAiClient`), nunca un rechazo permanente (clave invalida, request mal formada), que
+     * fallaria otra vez identico. `MAX_ATTEMPTS = 2` (un solo reintento) es deliberadamente
+     * conservador: esto ya tiene su presupuesto verificado, pero no hay razon para insistir mas de
+     * una vez ante algo que quiza no sea pasajero de verdad.
+     */
+    private suspend fun retryTransient(block: suspend () -> AnalysisResult): AnalysisResult {
+        var attempt = 1
+        var result = block()
+        while (result is AnalysisResult.Failed && result.transient && attempt < MAX_ATTEMPTS) {
+            delay(RETRY_DELAY_MS)
+            result = block()
+            attempt++
+        }
+        return result
+    }
+
+    private companion object {
+        const val MAX_ATTEMPTS = 2
+        const val RETRY_DELAY_MS = 1_000L
     }
 }

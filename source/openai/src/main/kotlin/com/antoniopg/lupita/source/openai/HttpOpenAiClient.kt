@@ -33,12 +33,20 @@ class HttpOpenAiClient(
                 client.newCall(httpRequest).execute().use { response ->
                     val raw = response.body?.string().orEmpty()
                     if (!response.isSuccessful) {
-                        AnalysisResult.Failed(OpenAiResponseParser.parseErrorMessage(raw) ?: "HTTP ${response.code}")
+                        val message = OpenAiResponseParser.parseErrorMessage(raw) ?: "HTTP ${response.code}"
+                        // 429 (limite de tasa) y 5xx (fallo del lado del servidor) son los unicos casos
+                        // donde repetir la MISMA request tiene sentido; un 4xx normal (clave invalida,
+                        // request mal formada) va a fallar otra vez exactamente igual.
+                        AnalysisResult.Failed(message, transient = response.code == 429 || response.code in 500..599)
                     } else {
                         OpenAiResponseParser.parseSuccess(raw, model)
                     }
                 }
-            }.getOrElse { AnalysisResult.Failed(it.message ?: it::class.simpleName ?: "error desconocido") }
+            }.getOrElse {
+                // Timeout, conexion perdida, DNS... nunca se sabe si la request llego a procesarse o
+                // no, pero repetirla es razonable (a diferencia de un 4xx, que es un rechazo seguro).
+                AnalysisResult.Failed(it.message ?: it::class.simpleName ?: "error desconocido", transient = true)
+            }
         }
 
     private companion object {
