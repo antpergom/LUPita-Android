@@ -84,7 +84,7 @@
 
     <string name="ai_provider_title">AI provider</string>
     <string name="ai_provider_intro">The key is stored encrypted on this device and is never shown again.</string>
-    <string name="ai_provider_deepseek">DeepSeek</string>
+    <string name="ai_provider_openai">OpenAI (GPT-6 Luna)</string>
     <string name="ai_provider_configured">Key saved.</string>
     <string name="ai_provider_not_configured">No key saved yet.</string>
     <string name="ai_provider_key_label">API key</string>

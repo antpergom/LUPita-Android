@@ -1,5 +1,6 @@
 {
   "models": [
+    { "id": "gpt-6-luna", "label": "GPT-6 Luna (OpenAI)", "inputUsdPerMillion": 0.10, "cachedInputUsdPerMillion": 0.01, "outputUsdPerMillion": 0.50 },
     { "id": "claude-sonnet", "label": "Claude Sonnet" },
     { "id": "gemini-2-5-pro", "label": "Gemini 2.5 Pro" },
     { "id": "local", "label": "Modelo local / on-device" }

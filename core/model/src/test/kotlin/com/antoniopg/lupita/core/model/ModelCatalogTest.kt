@@ -72,4 +72,21 @@ class ModelCatalogTest {
         assertNull(ModelCatalog.effectiveSelection(emptyList(), storedId = "a"))
         assertNull(ModelCatalog.effectiveSelection(emptyList(), storedId = null))
     }
+
+    @Test
+    fun `pricing fields are parsed when present`() {
+        val parsed = ModelCatalog.parse(
+            """{"models":[{"id":"gpt-6-luna","label":"Luna","inputUsdPerMillion":0.10,"cachedInputUsdPerMillion":0.01,"outputUsdPerMillion":0.50}]}""",
+        )
+
+        assertEquals(ModelOption("gpt-6-luna", "Luna", 0.10, 0.01, 0.50), parsed.single())
+    }
+
+    @Test
+    fun `an entry without pricing parses with null prices, not dropped`() {
+        val parsed = ModelCatalog.parse("""{"models":[{"id":"a","label":"Alpha"}]}""")
+
+        assertEquals(ModelOption("a", "Alpha"), parsed.single())
+        assertNull(parsed.single().inputUsdPerMillion)
+    }
 }

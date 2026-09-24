@@ -54,7 +54,7 @@ class TinkAiCredentialsRepositoryTest {
     fun `the stored value is never the plaintext key`() = runTest {
         repo.save(AiCredentials("sk-super-secret"))
 
-        val raw = store.data.first()[stringPreferencesKey("ai_deepseek_api_key")]
+        val raw = store.data.first()[stringPreferencesKey("ai_openai_api_key")]
         assertEquals(false, raw?.contains("sk-super-secret"))
     }
 

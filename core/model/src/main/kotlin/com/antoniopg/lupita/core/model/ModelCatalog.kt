@@ -3,9 +3,20 @@ package com.antoniopg.lupita.core.model
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-/** Un modelo de IA elegible en Ajustes. [id] es lo que se persiste; [label] es el nombre del producto. */
+/**
+ * Un modelo de IA elegible en Ajustes. [id] es lo que se persiste; [label] es el nombre del producto.
+ * Los tres precios (F5, decision 2026-09-24: OpenAI GPT-6 Luna) son opcionales — `null` en una entrada
+ * mock/placeholder que no corresponde a ningun proveedor real todavia; sin ellos no se puede convertir
+ * el uso de tokens de esa entrada a [CostMicros], pero el catalogo entero no se descarta por eso.
+ */
 @Serializable
-data class ModelOption(val id: String, val label: String)
+data class ModelOption(
+    val id: String,
+    val label: String,
+    val inputUsdPerMillion: Double? = null,
+    val cachedInputUsdPerMillion: Double? = null,
+    val outputUsdPerMillion: Double? = null,
+)
 
 @Serializable
 private data class ModelCatalogFile(val models: List<ModelOption> = emptyList())

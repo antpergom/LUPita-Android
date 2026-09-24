@@ -84,7 +84,7 @@
 
     <string name="ai_provider_title">Proveedor de IA</string>
     <string name="ai_provider_intro">La clave se guarda cifrada en este dispositivo y no vuelve a mostrarse.</string>
-    <string name="ai_provider_deepseek">DeepSeek</string>
+    <string name="ai_provider_openai">OpenAI (GPT-6 Luna)</string>
     <string name="ai_provider_configured">Clave guardada.</string>
     <string name="ai_provider_not_configured">Todavía no hay ninguna clave guardada.</string>
     <string name="ai_provider_key_label">Clave de API</string>

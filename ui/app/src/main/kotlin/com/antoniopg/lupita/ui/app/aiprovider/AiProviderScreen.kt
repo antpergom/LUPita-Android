@@ -88,7 +88,7 @@ fun AiProviderScreen(ui: AiProviderUi, onBack: () -> Unit, modifier: Modifier = 
         Text(stringResource(R.string.ai_provider_intro), color = c.subtle, fontSize = 12.sp)
         Spacer(Modifier.height(20.dp))
 
-        SectionLabel(stringResource(R.string.ai_provider_deepseek))
+        SectionLabel(stringResource(R.string.ai_provider_openai))
         Text(
             stringResource(if (ui.keyConfigured) R.string.ai_provider_configured else R.string.ai_provider_not_configured),
             color = if (ui.keyConfigured) c.ink else c.subtle,
