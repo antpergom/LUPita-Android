@@ -7,6 +7,8 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.antoniopg.lupita.capability.privacy.PrivacyCatalogParser
 import com.antoniopg.lupita.capability.privacy.PrivacyGate
+import com.antoniopg.lupita.capability.web.OkHttpWebFetcher
+import com.antoniopg.lupita.capability.web.WebFetcher
 import com.antoniopg.lupita.core.model.AiCredentialsRepository
 import com.antoniopg.lupita.core.model.AnalysisHistoryRepository
 import com.antoniopg.lupita.core.model.BudgetDefaults
@@ -118,6 +120,10 @@ class AppContainer(private val context: Context) {
 
     /** El unico cliente que toca la red de OpenAI de verdad (F5 paso 2). */
     private val openAiClient: OpenAiClient by lazy { HttpOpenAiClient() }
+
+    /** Cablea F3 (`:capability:web`) a Verificacion de hechos (2026-09-25): fetch real de una URL
+     * citada en el texto capturado, cuando la hay. */
+    val webFetcher: WebFetcher by lazy { OkHttpWebFetcher() }
 
     /** Colas por clase de recurso (F4 paso 2) — una instancia para toda la app, no una por llamada. */
     private val resourceQueues: ResourceQueues by lazy { ResourceQueues() }

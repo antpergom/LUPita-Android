@@ -20,11 +20,22 @@ import com.antoniopg.lupita.LupitaApp
 import com.antoniopg.lupita.MainActivity
 import com.antoniopg.lupita.R
 import com.antoniopg.lupita.capability.context.ContextNormalizer
+import com.antoniopg.lupita.capability.image.C2paDetection
+import com.antoniopg.lupita.capability.image.C2paDetector
+import com.antoniopg.lupita.capability.image.asPromptContext
+import com.antoniopg.lupita.capability.ocr.OcrGate
+import com.antoniopg.lupita.capability.ocr.TextOcr
 import com.antoniopg.lupita.capability.privacy.CapturePipeline
 import com.antoniopg.lupita.capability.screen.AccessibilityScreenSource
 import com.antoniopg.lupita.capability.screen.ProjectionScreenSource
 import com.antoniopg.lupita.capability.screen.ProjectionSession
 import com.antoniopg.lupita.capability.screen.RegionImage
+import com.antoniopg.lupita.capability.text.EntityExtractor
+import com.antoniopg.lupita.capability.text.ExtractedEntities
+import com.antoniopg.lupita.capability.text.asPromptContext
+import com.antoniopg.lupita.capability.web.FetchResult
+import com.antoniopg.lupita.capability.web.Readability
+import com.antoniopg.lupita.capability.web.asPromptContext
 import com.antoniopg.lupita.capture.ProjectionConsentActivity
 import com.antoniopg.lupita.core.model.AnalysisHistoryEntry
 import com.antoniopg.lupita.core.model.AppSection
@@ -49,10 +60,10 @@ import com.antoniopg.lupita.core.model.SelectionRect
 import com.antoniopg.lupita.core.model.ToolId
 import com.antoniopg.lupita.orchestrator.AnalysisRunner
 import com.antoniopg.lupita.orchestrator.DenyReason
-import com.antoniopg.lupita.source.openai.AiDetectPromptV2
-import com.antoniopg.lupita.source.openai.EntityPromptV2
+import com.antoniopg.lupita.source.openai.AiDetectPromptV3
+import com.antoniopg.lupita.source.openai.EntityPromptV3
 import com.antoniopg.lupita.source.openai.GeneralAnalysisPromptV2
-import com.antoniopg.lupita.source.openai.VerifyPromptV2
+import com.antoniopg.lupita.source.openai.VerifyPromptV3
 import com.antoniopg.lupita.ui.overlay.AskSaveOverlay
 import com.antoniopg.lupita.ui.overlay.BubbleOverlay
 import com.antoniopg.lupita.ui.overlay.ToolResultState
@@ -225,6 +236,8 @@ class OverlayService : Service() {
     private suspend fun runAnalyses(
         text: String,
         imageWebpBase64: String?,
+        entities: ExtractedEntities,
+        c2pa: C2paDetection?,
         bubbleSettings: BubbleSettings,
         modelId: String?,
         packageName: String,
@@ -241,13 +254,13 @@ class OverlayService : Service() {
         // Agrupa las herramientas de esta captura en el Historial (F5/F6: varias comparten una) y
         // deja el contexto guardado para que un "Reintentar" del panel sepa que volver a llamar.
         val sessionId = java.util.UUID.randomUUID().toString()
-        resultsContext = ResultsContext(sessionId, text, bubbleSettings.depth, model, packageName, appLabel, imageWebpBase64)
+        resultsContext = ResultsContext(sessionId, text, bubbleSettings.depth, model, packageName, appLabel, imageWebpBase64, entities, c2pa)
         bubble?.showResults(activeTools)
 
         var selectionSpent = CostMicros.ZERO
         var selectionPaidCalls = 0
         for (tool in activeTools) {
-            val outcome = runOneTool(sessionId, tool, text, bubbleSettings.depth, model, packageName, appLabel, selectionSpent, selectionPaidCalls, imageWebpBase64)
+            val outcome = runOneTool(sessionId, tool, text, bubbleSettings.depth, model, packageName, appLabel, selectionSpent, selectionPaidCalls, imageWebpBase64, entities, c2pa)
             if (outcome is AnalysisRunner.Outcome.Success) {
                 selectionSpent += outcome.cost
                 selectionPaidCalls++
@@ -271,10 +284,13 @@ class OverlayService : Service() {
         selectionSpent: CostMicros,
         selectionPaidCalls: Int,
         imageWebpBase64: String? = null,
+        entities: ExtractedEntities = ExtractedEntities(),
+        c2pa: C2paDetection? = null,
     ): AnalysisRunner.Outcome {
         val container = (application as LupitaApp).container
         val (capabilityId, prompt) = promptFor(tool)
-        val outcome = container.analysisRunner.run(tool, capabilityId, prompt, text, depth, model, selectionSpent, selectionPaidCalls, imageWebpBase64)
+        val textForTool = contextFor(tool, entities, c2pa)?.let { "$it\n\n---\n\n$text" } ?: text
+        val outcome = container.analysisRunner.run(tool, capabilityId, prompt, textForTool, depth, model, selectionSpent, selectionPaidCalls, imageWebpBase64)
         val success = outcome as? AnalysisRunner.Outcome.Success
         container.analysisHistory.record(
             AnalysisHistoryEntry(
@@ -307,7 +323,10 @@ class OverlayService : Service() {
     private fun retryAnalysis(tool: ToolId) {
         val ctx = resultsContext ?: return
         scope.launch {
-            runOneTool(ctx.sessionId, tool, ctx.text, ctx.depth, ctx.model, ctx.packageName, ctx.appLabel, CostMicros.ZERO, 0, ctx.imageWebpBase64)
+            runOneTool(
+                ctx.sessionId, tool, ctx.text, ctx.depth, ctx.model, ctx.packageName, ctx.appLabel,
+                CostMicros.ZERO, 0, ctx.imageWebpBase64, ctx.entities, ctx.c2pa,
+            )
         }
     }
 
@@ -320,15 +339,46 @@ class OverlayService : Service() {
         val packageName: String,
         val appLabel: String?,
         val imageWebpBase64: String?,
+        val entities: ExtractedEntities,
+        val c2pa: C2paDetection?,
     )
 
-    // V2 de los 4 prompts (2026-09-25): piden negrita en los puntos clave, ahora que el panel de
-    // resultados interpreta `**negrita**` de verdad. V1 se queda tal cual (nunca se edita in situ).
+    // GENERAL en V2 (negrita, no tiene contexto de F3 que cablear). VERIFY/AI_DETECT/ENTITY en V3
+    // (2026-09-25): negrita + instrucciones para el contexto determinista que anade [contextFor].
+    // Ninguna V1/V2 se edita in situ.
     private fun promptFor(tool: ToolId): Pair<String, String> = when (tool) {
         ToolId.GENERAL -> GeneralAnalysisPromptV2.CAPABILITY_ID to GeneralAnalysisPromptV2.system
-        ToolId.VERIFY -> VerifyPromptV2.CAPABILITY_ID to VerifyPromptV2.system
-        ToolId.AI_DETECT -> AiDetectPromptV2.CAPABILITY_ID to AiDetectPromptV2.system
-        ToolId.ENTITY -> EntityPromptV2.CAPABILITY_ID to EntityPromptV2.system
+        ToolId.VERIFY -> VerifyPromptV3.CAPABILITY_ID to VerifyPromptV3.system
+        ToolId.AI_DETECT -> AiDetectPromptV3.CAPABILITY_ID to AiDetectPromptV3.system
+        ToolId.ENTITY -> EntityPromptV3.CAPABILITY_ID to EntityPromptV3.system
+    }
+
+    /**
+     * Contexto determinista de F3 anadido ANTES del texto normalizado, especifico de cada
+     * herramienta (2026-09-25, cierra el hueco que cada V1 ya anunciaba en su doc comment): `null`
+     * si no hay nada que anadir, el llamador no toca el texto en ese caso.
+     */
+    private suspend fun contextFor(tool: ToolId, entities: ExtractedEntities, c2pa: C2paDetection?): String? =
+        when (tool) {
+            ToolId.ENTITY -> entities.asPromptContext()
+            ToolId.AI_DETECT -> c2pa?.asPromptContext()
+            ToolId.VERIFY -> fetchedWebContext(entities.urls)
+            ToolId.GENERAL -> null
+        }
+
+    /**
+     * Solo para Verificacion de hechos: si el texto cita una URL, la descarga de verdad (F3,
+     * `WebFetcher`) y saca su cuerpo legible (`Readability`) — primer paso real hacia F4.5. Prueba
+     * solo la PRIMERA url (una llamada de red por captura, no una por cada enlace citado); `null`
+     * ante cualquier fallo (sin red, pagina no HTML, cuerpo vacio) sin bloquear el analisis.
+     */
+    private suspend fun fetchedWebContext(urls: List<String>): String? {
+        val url = urls.firstOrNull() ?: return null
+        val container = (application as LupitaApp).container
+        val success = container.webFetcher.fetch(url) as? FetchResult.Success ?: return null
+        val contentType = success.contentType
+        if (contentType != null && !contentType.contains("html", ignoreCase = true)) return null
+        return Readability.extract(success.body.take(HTML_FETCH_CAP), url).asPromptContext(url)
     }
 
     /** Texto de un desenlace SIN exito — usado como `reason` en Historial y como cuerpo del estado
@@ -393,9 +443,35 @@ class OverlayService : Service() {
                 // arriba, para la politica de guardado) — reutilizarla en base64 en vez de descartarla
                 // era el hueco por el que la IA nunca veia el recorte, solo el texto.
                 val imageWebpBase64 = encoded?.bytes?.let { android.util.Base64.encodeToString(it, android.util.Base64.NO_WRAP) }
+                // F3 cableado al flujo real (2026-09-25): OCR SOLO si el arbol dio muy poco texto
+                // (memes, capturas de imagen pura) — con texto ya sustancioso no aporta nada, solo
+                // anadiria latencia. El texto que ven las 4 herramientas incluye el OCR cuando corrio;
+                // `textArtifact`/`capture_normalized` de arriba se quedan atados al texto del arbol
+                // solo, para que el hash siga significando "lo que el arbol dio" sin mezclarlo.
+                val ocrText = if (image != null && OcrGate.shouldRun(normalized.plainText)) {
+                    val bitmap = withContext(Dispatchers.Default) {
+                        android.graphics.Bitmap.createBitmap(image.argb, image.width, image.height, android.graphics.Bitmap.Config.ARGB_8888)
+                    }
+                    try {
+                        TextOcr.recognize(bitmap).fullText.takeIf { it.isNotBlank() }
+                    } finally {
+                        bitmap.recycle()
+                    }
+                } else {
+                    null
+                }
+                val analysisText = if (ocrText != null) "${normalized.plainText}\n\n$ocrText".trim() else normalized.plainText
+                // Extraccion determinista (F3, `EntityExtractor`) sobre el texto YA enriquecido con el
+                // OCR — un enlace o mencion visible solo en la imagen (meme, captura de pantalla) tambien
+                // cuenta. Senal C2PA (F3, `C2paDetector`) sobre los bytes de la imagen, si la hay.
+                val entities = EntityExtractor.extract(analysisText)
+                val c2pa = encoded?.bytes?.let { C2paDetector.detect(it) }
                 // F5/F6: abre el panel de resultados en vivo (BubbleOverlay.showResults/updateResult) si hay
                 // alguna herramienta activa; `analysisError` solo se rellena si ni siquiera pudo arrancar.
-                val analysisError = runAnalyses(normalized.plainText, imageWebpBase64, bubbleSettings, modelId, bundle.header.packageName, bundle.header.appLabel)
+                val analysisError = runAnalyses(
+                    analysisText, imageWebpBase64, entities, c2pa, bubbleSettings, modelId,
+                    bundle.header.packageName, bundle.header.appLabel,
+                )
                 Summary(
                     message = getString(
                         R.string.capture_read,
@@ -530,6 +606,10 @@ class OverlayService : Service() {
 
         /** Separacion entre los dos toasts del resumen: que no se pisen ni se lean como uno solo. */
         private const val TOAST_GAP_MS = 3500L
+
+        /** Tope de HTML leido antes de pasarlo a Jsoup en [fetchedWebContext] — pagina real, no la
+         * pantalla del usuario; una defensa barata contra una pagina desmesurada. */
+        private const val HTML_FETCH_CAP = 500_000
         const val ACTION_STOP = "com.antoniopg.lupita.action.STOP_OVERLAY"
         private const val CHANNEL_ID = "overlay_service"
         private const val NOTIFICATION_ID = 1
