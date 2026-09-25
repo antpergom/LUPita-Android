@@ -57,4 +57,12 @@ class OpenAiCostTest {
         val expected = CostMicros.ofUsd(100 * 0.10 / 1_000_000.0) + CostMicros.ofUsd(400 * 0.50 / 1_000_000.0)
         assertEquals(expected, estimate)
     }
+
+    @Test
+    fun `an image adds a conservative flat allowance to the input estimate, never zero`() {
+        val withoutImage = OpenAiCost.worstCaseEstimate(promptChars = 200, textChars = 200, maxOutputTokens = 400, model = luna)
+        val withImage = OpenAiCost.worstCaseEstimate(promptChars = 200, textChars = 200, maxOutputTokens = 400, model = luna, hasImage = true)
+
+        assertEquals(true, withImage != null && withoutImage != null && withImage > withoutImage)
+    }
 }

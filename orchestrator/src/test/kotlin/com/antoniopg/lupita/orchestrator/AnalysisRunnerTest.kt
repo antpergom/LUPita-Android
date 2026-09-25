@@ -175,6 +175,50 @@ class AnalysisRunnerTest {
     }
 
     @Test
+    fun `the tool's own system prompt actually reaches the request, not a hidden default`() = runTest {
+        // Bug real (2026-09-25): systemPrompt se usaba solo para estimar el coste, nunca llegaba a
+        // AnalysisRequest — las 3 herramientas que no eran GENERAL enviaban siempre el prompt de
+        // Analisis general de verdad. Esta prueba falla si esa regresion vuelve.
+        val client = FakeOpenAiClient(
+            AnalysisResult.Success(text = "analisis", inputTokens = 100, outputTokens = 50, cachedInputTokens = 0, model = "gpt-6-luna"),
+        )
+        val (runner, _) = runner(openAi = client)
+
+        runner.run(
+            tool = ToolId.VERIFY,
+            capabilityId = VerifyPromptV1.CAPABILITY_ID,
+            systemPrompt = VerifyPromptV1.system,
+            text = "texto",
+            depth = Depth.LOW,
+            model = luna,
+        )
+
+        assertEquals(VerifyPromptV1.system, client.lastRequest?.systemPrompt)
+        assertEquals(GeneralAnalysisPromptV1.system != VerifyPromptV1.system, true)
+    }
+
+    @Test
+    fun `an image, when present, is forwarded to the request and its cost is estimated`() = runTest {
+        val client = FakeOpenAiClient(
+            AnalysisResult.Success(text = "analisis", inputTokens = 100, outputTokens = 50, cachedInputTokens = 0, model = "gpt-6-luna"),
+        )
+        val (runner, _) = runner(openAi = client)
+
+        val outcome = runner.run(
+            tool = ToolId.GENERAL,
+            capabilityId = GeneralAnalysisPromptV1.CAPABILITY_ID,
+            systemPrompt = GeneralAnalysisPromptV1.system,
+            text = "texto",
+            depth = Depth.LOW,
+            model = luna,
+            imageWebpBase64 = "QUJD",
+        )
+
+        assertTrue(outcome is AnalysisRunner.Outcome.Success)
+        assertEquals("QUJD", client.lastRequest?.imageWebpBase64)
+    }
+
+    @Test
     fun `accumulated selection spend from prior tools in the same capture is honored`() = runTest {
         // Tope de profundidad muy bajo: ya gastado en la seleccion + esta llamada lo supera.
         val settings = BudgetSettings(

@@ -224,6 +224,7 @@ class OverlayService : Service() {
      */
     private suspend fun runAnalyses(
         text: String,
+        imageWebpBase64: String?,
         bubbleSettings: BubbleSettings,
         modelId: String?,
         packageName: String,
@@ -240,13 +241,13 @@ class OverlayService : Service() {
         // Agrupa las herramientas de esta captura en el Historial (F5/F6: varias comparten una) y
         // deja el contexto guardado para que un "Reintentar" del panel sepa que volver a llamar.
         val sessionId = java.util.UUID.randomUUID().toString()
-        resultsContext = ResultsContext(sessionId, text, bubbleSettings.depth, model, packageName, appLabel)
+        resultsContext = ResultsContext(sessionId, text, bubbleSettings.depth, model, packageName, appLabel, imageWebpBase64)
         bubble?.showResults(activeTools)
 
         var selectionSpent = CostMicros.ZERO
         var selectionPaidCalls = 0
         for (tool in activeTools) {
-            val outcome = runOneTool(sessionId, tool, text, bubbleSettings.depth, model, packageName, appLabel, selectionSpent, selectionPaidCalls)
+            val outcome = runOneTool(sessionId, tool, text, bubbleSettings.depth, model, packageName, appLabel, selectionSpent, selectionPaidCalls, imageWebpBase64)
             if (outcome is AnalysisRunner.Outcome.Success) {
                 selectionSpent += outcome.cost
                 selectionPaidCalls++
@@ -269,10 +270,11 @@ class OverlayService : Service() {
         appLabel: String?,
         selectionSpent: CostMicros,
         selectionPaidCalls: Int,
+        imageWebpBase64: String? = null,
     ): AnalysisRunner.Outcome {
         val container = (application as LupitaApp).container
         val (capabilityId, prompt) = promptFor(tool)
-        val outcome = container.analysisRunner.run(tool, capabilityId, prompt, text, depth, model, selectionSpent, selectionPaidCalls)
+        val outcome = container.analysisRunner.run(tool, capabilityId, prompt, text, depth, model, selectionSpent, selectionPaidCalls, imageWebpBase64)
         val success = outcome as? AnalysisRunner.Outcome.Success
         container.analysisHistory.record(
             AnalysisHistoryEntry(
@@ -305,7 +307,7 @@ class OverlayService : Service() {
     private fun retryAnalysis(tool: ToolId) {
         val ctx = resultsContext ?: return
         scope.launch {
-            runOneTool(ctx.sessionId, tool, ctx.text, ctx.depth, ctx.model, ctx.packageName, ctx.appLabel, CostMicros.ZERO, 0)
+            runOneTool(ctx.sessionId, tool, ctx.text, ctx.depth, ctx.model, ctx.packageName, ctx.appLabel, CostMicros.ZERO, 0, ctx.imageWebpBase64)
         }
     }
 
@@ -317,6 +319,7 @@ class OverlayService : Service() {
         val model: ModelOption,
         val packageName: String,
         val appLabel: String?,
+        val imageWebpBase64: String?,
     )
 
     // V2 de los 4 prompts (2026-09-25): piden negrita en los puntos clave, ahora que el panel de
@@ -386,9 +389,13 @@ class OverlayService : Service() {
                 // F2: normalizacion determinista (filtrado, orden de lectura, roles) + artefacto por hash del texto.
                 val normalized = ContextNormalizer.normalize(content.nodes)
                 val textArtifact = ArtifactHash.of(normalized.plainText)
+                // Bug real corregido 2026-09-25: la imagen ya viaja codificada en WEBP (`encoded`, de
+                // arriba, para la politica de guardado) — reutilizarla en base64 en vez de descartarla
+                // era el hueco por el que la IA nunca veia el recorte, solo el texto.
+                val imageWebpBase64 = encoded?.bytes?.let { android.util.Base64.encodeToString(it, android.util.Base64.NO_WRAP) }
                 // F5/F6: abre el panel de resultados en vivo (BubbleOverlay.showResults/updateResult) si hay
                 // alguna herramienta activa; `analysisError` solo se rellena si ni siquiera pudo arrancar.
-                val analysisError = runAnalyses(normalized.plainText, bubbleSettings, modelId, bundle.header.packageName, bundle.header.appLabel)
+                val analysisError = runAnalyses(normalized.plainText, imageWebpBase64, bubbleSettings, modelId, bundle.header.packageName, bundle.header.appLabel)
                 Summary(
                     message = getString(
                         R.string.capture_read,

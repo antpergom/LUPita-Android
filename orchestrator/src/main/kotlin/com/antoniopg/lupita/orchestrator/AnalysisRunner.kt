@@ -63,6 +63,7 @@ class AnalysisRunner(
         model: ModelOption,
         selectionSpent: CostMicros = CostMicros.ZERO,
         selectionPaidCalls: Int = 0,
+        imageWebpBase64: String? = null,
     ): Outcome {
         val apiKey = aiCredentials.credentials.first()?.apiKey ?: return Outcome.NoApiKey
 
@@ -72,6 +73,7 @@ class AnalysisRunner(
             textChars = text.length,
             maxOutputTokens = maxOutputTokens,
             model = model,
+            hasImage = imageWebpBase64 != null,
         ) ?: return Outcome.NoPricing
 
         val settings = budgetSettings.settings.first()
@@ -93,7 +95,11 @@ class AnalysisRunner(
         // permitido (nada se ha gastado todavia, ni aunque fallen), no piden permiso otra vez.
         val result = retryTransient {
             queues.run(ResourceClass.LLM) {
-                openAi.analyze(AnalysisRequest(text = text, depth = depth), apiKey, model.id)
+                openAi.analyze(
+                    AnalysisRequest(text = text, systemPrompt = systemPrompt, imageWebpBase64 = imageWebpBase64, depth = depth),
+                    apiKey,
+                    model.id,
+                )
             }
         }
 

@@ -28,15 +28,23 @@ object OpenAiCost {
      * (~4 caracteres/token) mas el tope de tokens de salida ya fijado en la request
      * ([OpenAiRequestBuilder.maxOutputTokens]): el coste real nunca puede superar esto por
      * construccion, salvo que la API facture distinto de lo documentado.
+     *
+     * [hasImage] (2026-09-25, cierra el hueco de que la imagen nunca se enviaba): OpenAI no publica
+     * la formula exacta de tokens de imagen de GPT-6 Luna, asi que se usa [IMAGE_TOKENS_ESTIMATE],
+     * una cota fija deliberadamente generosa (recortes de seleccion, nunca la pantalla entera) en
+     * vez de calcularla por dimension real — sigue el mismo principio de "mejor sobreestimar" que el
+     * resto de esta funcion. Revisar si OpenAI publica el desglose real para este modelo.
      */
-    fun worstCaseEstimate(promptChars: Int, textChars: Int, maxOutputTokens: Int, model: ModelOption): CostMicros? {
+    fun worstCaseEstimate(promptChars: Int, textChars: Int, maxOutputTokens: Int, model: ModelOption, hasImage: Boolean = false): CostMicros? {
         val inputPrice = model.inputUsdPerMillion ?: return null
         val outputPrice = model.outputUsdPerMillion ?: return null
-        val inputTokens = estimateTokens(promptChars + textChars)
+        val inputTokens = estimateTokens(promptChars + textChars) + (if (hasImage) IMAGE_TOKENS_ESTIMATE else 0)
         return micros(inputTokens, inputPrice) + micros(maxOutputTokens, outputPrice)
     }
 
     private fun estimateTokens(chars: Int): Int = ceil(chars / 4.0).toInt()
 
     private fun micros(tokens: Int, usdPerMillion: Double): CostMicros = CostMicros.ofUsd(tokens * usdPerMillion / 1_000_000.0)
+
+    private const val IMAGE_TOKENS_ESTIMATE = 1_500
 }

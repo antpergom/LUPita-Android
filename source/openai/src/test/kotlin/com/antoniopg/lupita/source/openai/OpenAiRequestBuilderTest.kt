@@ -10,7 +10,7 @@ import org.junit.Test
 class OpenAiRequestBuilderTest {
     @Test
     fun `the model and both roles are present`() {
-        val body = OpenAiRequestBuilder.build(AnalysisRequest("hola", depth = Depth.LOW), model = "gpt-6-luna")
+        val body = OpenAiRequestBuilder.build(AnalysisRequest("hola", systemPrompt = "s", depth = Depth.LOW), model = "gpt-6-luna")
 
         assertEquals("gpt-6-luna", body["model"]?.jsonPrimitive?.content)
         val input = body["input"]!!.jsonArray
@@ -20,7 +20,7 @@ class OpenAiRequestBuilderTest {
 
     @Test
     fun `the user text is carried through as input_text`() {
-        val body = OpenAiRequestBuilder.build(AnalysisRequest("el texto normalizado", depth = Depth.LOW), model = "m")
+        val body = OpenAiRequestBuilder.build(AnalysisRequest("el texto normalizado", systemPrompt = "s", depth = Depth.LOW), model = "m")
 
         val userContent = body["input"]!!.jsonArray[1].jsonObject["content"]!!.jsonArray
         assertEquals("input_text", userContent[0].jsonObject["type"]?.jsonPrimitive?.content)
@@ -29,7 +29,7 @@ class OpenAiRequestBuilderTest {
 
     @Test
     fun `without an image only the text part is sent`() {
-        val body = OpenAiRequestBuilder.build(AnalysisRequest("solo texto", depth = Depth.LOW), model = "m")
+        val body = OpenAiRequestBuilder.build(AnalysisRequest("solo texto", systemPrompt = "s", depth = Depth.LOW), model = "m")
 
         val userContent = body["input"]!!.jsonArray[1].jsonObject["content"]!!.jsonArray
         assertEquals(1, userContent.size)
@@ -38,7 +38,7 @@ class OpenAiRequestBuilderTest {
     @Test
     fun `an image is sent as a base64 data URL`() {
         val body = OpenAiRequestBuilder.build(
-            AnalysisRequest("con imagen", imageWebpBase64 = "QUJD", depth = Depth.LOW),
+            AnalysisRequest("con imagen", systemPrompt = "s", imageWebpBase64 = "QUJD", depth = Depth.LOW),
             model = "m",
         )
 
@@ -53,21 +53,21 @@ class OpenAiRequestBuilderTest {
     fun `depth maps to reasoning effort one to one`() {
         assertEquals(
             "low",
-            OpenAiRequestBuilder.build(AnalysisRequest("t", depth = Depth.LOW), "m")["reasoning"]!!.jsonObject["effort"]!!.jsonPrimitive.content,
+            OpenAiRequestBuilder.build(AnalysisRequest("t", systemPrompt = "s", depth = Depth.LOW), "m")["reasoning"]!!.jsonObject["effort"]!!.jsonPrimitive.content,
         )
         assertEquals(
             "medium",
-            OpenAiRequestBuilder.build(AnalysisRequest("t", depth = Depth.MEDIUM), "m")["reasoning"]!!.jsonObject["effort"]!!.jsonPrimitive.content,
+            OpenAiRequestBuilder.build(AnalysisRequest("t", systemPrompt = "s", depth = Depth.MEDIUM), "m")["reasoning"]!!.jsonObject["effort"]!!.jsonPrimitive.content,
         )
         assertEquals(
             "high",
-            OpenAiRequestBuilder.build(AnalysisRequest("t", depth = Depth.HIGH), "m")["reasoning"]!!.jsonObject["effort"]!!.jsonPrimitive.content,
+            OpenAiRequestBuilder.build(AnalysisRequest("t", systemPrompt = "s", depth = Depth.HIGH), "m")["reasoning"]!!.jsonObject["effort"]!!.jsonPrimitive.content,
         )
     }
 
     @Test
-    fun `a custom prompt replaces the default system text`() {
-        val body = OpenAiRequestBuilder.build(AnalysisRequest("t", depth = Depth.LOW), "m", prompt = "prompt a medida")
+    fun `the system prompt always comes from the request, never a hidden default`() {
+        val body = OpenAiRequestBuilder.build(AnalysisRequest("t", systemPrompt = "prompt a medida", depth = Depth.LOW), "m")
 
         val systemContent = body["input"]!!.jsonArray[0].jsonObject["content"]!!.jsonArray
         assertEquals("prompt a medida", systemContent[0].jsonObject["text"]?.jsonPrimitive?.content)
@@ -76,7 +76,7 @@ class OpenAiRequestBuilderTest {
     @Test
     fun `max_output_tokens grows with depth and matches maxOutputTokens()`() {
         Depth.entries.forEach { depth ->
-            val body = OpenAiRequestBuilder.build(AnalysisRequest("t", depth = depth), "m")
+            val body = OpenAiRequestBuilder.build(AnalysisRequest("t", systemPrompt = "s", depth = depth), "m")
             assertEquals(
                 OpenAiRequestBuilder.maxOutputTokens(depth),
                 body["max_output_tokens"]?.jsonPrimitive?.content?.toInt(),

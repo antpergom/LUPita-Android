@@ -4,10 +4,15 @@ import com.antoniopg.lupita.core.model.Depth
 
 /**
  * Lo que se manda a analizar: texto ya normalizado (F2, `ContextNormalizer`) y, si lo hay, una imagen
- * ya codificada (F1.3, WebP) en base64. [depth] fija el esfuerzo de razonamiento pedido al modelo
- * (`reasoning.effort` en la Responses API) — mismos tres niveles que el presupuesto (F4).
+ * ya codificada (F1.3, WebP) en base64. [systemPrompt] es OBLIGATORIO (sin valor por defecto a
+ * proposito, 2026-09-25): antes vivia como parametro opcional de `OpenAiRequestBuilder.build()`, con
+ * un valor por defecto que `HttpOpenAiClient` nunca sobreescribia — bug real encontrado el mismo dia,
+ * las 4 herramientas (Verificacion, Deteccion de IA e Investigacion de entidades incluidas) llevaban
+ * desde F6 enviando siempre el prompt de "Analisis general", nunca el suyo propio. [depth] fija el
+ * esfuerzo de razonamiento pedido al modelo (`reasoning.effort` en la Responses API) — mismos tres
+ * niveles que el presupuesto (F4).
  */
-data class AnalysisRequest(val text: String, val imageWebpBase64: String? = null, val depth: Depth)
+data class AnalysisRequest(val text: String, val systemPrompt: String, val imageWebpBase64: String? = null, val depth: Depth)
 
 /** Nunca lanza: un fallo de red o de la API es [Failed], igual que `FetchResult` en `:capability:web`. */
 sealed interface AnalysisResult {

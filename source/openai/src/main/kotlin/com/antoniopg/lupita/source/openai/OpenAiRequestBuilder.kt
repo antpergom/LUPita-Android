@@ -13,7 +13,10 @@ import kotlinx.serialization.json.putJsonArray
  * sitio publico). Puro: sin tocar la red, se prueba comparando el JSON resultante.
  */
 object OpenAiRequestBuilder {
-    fun build(request: AnalysisRequest, model: String, prompt: String = GeneralAnalysisPromptV1.system): JsonObject =
+    // El prompt SIEMPRE sale de request.systemPrompt (2026-09-25) — antes era un parametro aparte
+    // con valor por defecto, y ese defecto (GeneralAnalysisPromptV1) era lo que de verdad se enviaba
+    // siempre, porque HttpOpenAiClient nunca lo sobreescribia. Ver AnalysisRequest.
+    fun build(request: AnalysisRequest, model: String): JsonObject =
         buildJsonObject {
             put("model", model)
             putJsonArray("input") {
@@ -21,7 +24,7 @@ object OpenAiRequestBuilder {
                     buildJsonObject {
                         put("role", "system")
                         putJsonArray("content") {
-                            add(textPart(prompt))
+                            add(textPart(request.systemPrompt))
                         }
                     },
                 )
